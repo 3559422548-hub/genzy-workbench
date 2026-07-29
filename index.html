@@ -551,6 +551,25 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
 .diary-bottle-card .text{font-size:.85rem;line-height:1.4;white-space:pre-wrap;word-break:break-word;}
 .diary-bottle-card.pending .text{filter:blur(4px);user-select:none;cursor:not-allowed;}
 
+/* ===== Books: recommendations & search ===== */
+.book-sec-title { font-size:1.05rem;font-weight:700;margin:.3rem 0 .5rem;display:flex;align-items:center;gap:.4rem; }
+.book-q { margin-bottom:.7rem; }
+.book-q-h { font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:.35rem; }
+.book-chips { display:flex;flex-wrap:wrap;gap:.4rem; }
+.book-chip { font-size:.8rem;padding:.35rem .7rem;border-radius:999px;background:var(--card-2);border:1.5px solid transparent;cursor:pointer;user-select:none;transition:.12s; }
+.book-chip.active { background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600; }
+.book-rec-card { display:flex;gap:.65rem;background:var(--card);border-radius:14px;padding:.6rem;margin-bottom:.55rem;box-shadow:0 1px 4px rgba(0,0,0,.04); }
+.book-cover { width:54px;height:80px;border-radius:8px;flex-shrink:0;background:var(--card-2);display:flex;align-items:center;justify-content:center;font-size:1.7rem;overflow:hidden; }
+.book-cover img { width:100%;height:100%;object-fit:cover; }
+.book-meta { flex:1;min-width:0; }
+.book-title { font-weight:700;font-size:.92rem;line-height:1.25; }
+.book-author { font-size:.74rem;color:var(--muted);margin:.12rem 0; }
+.book-summary { font-size:.72rem;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:.2rem; }
+.book-tags { display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.3rem; }
+.book-tag { font-size:.6rem;background:var(--card-2);color:var(--muted);padding:.1rem .4rem;border-radius:6px; }
+.book-actions { display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap; }
+.book-src-note { font-size:.68rem;color:var(--muted);margin-top:.3rem;text-align:center; }
+
 /* ===== Weather (iOS-style, lavender theme) ===== */
 .wx-wrap { background: #ece6f5; border-radius: 22px; padding: 1rem 1rem .8rem; color: #1a1a1a; }
 .wx-loc { display:flex;justify-content:space-between;align-items:center; font-weight:600; font-size:1rem; padding:.2rem .3rem .8rem; }
@@ -912,7 +931,7 @@ function loadState(){
     collections: Storage.get('collections', {groups:['默认'], links:[]}),
     bills: Storage.get('bills', {expenses:{}, savings:0, savingsHistory:[]}),
     homework: Storage.get('homework', {images:[], tasks:[]}),
-    books: Storage.get('books', {tasks:[], timer:{}}),
+    books: Storage.get('books', {tasks:[], timer:{}, prefs:{genres:[], moods:[], langs:[]}}),
     kitchen: Storage.get('kitchen', {}),
     diary: Storage.get('diary', {entries:{}, bottles:[], moods:null})
   ,weather: Storage.get('weather', {city:'北京',data:null}),
@@ -2020,6 +2039,157 @@ const STYLE_GUIDES = {
   'rock':'Rock：强力和弦、失真吉他、贝斯与鼓锁紧，Verse 轻 Chorus 重，桥段做动态对比。',
   'lo-fi hip-hop':'Lo-fi Hip-hop：简单和弦 loop、爵士采样、鼓组 swing、 vinyl crackle/雨声营造氛围。'
 };
+// ===== Books: recommendations & search (Gutendex / Project Gutenberg) =====
+const BOOK_GENRES = [
+  {label:'文学小说', topic:'fiction'},
+  {label:'科幻', topic:'science'},
+  {label:'奇幻', topic:'fantasy'},
+  {label:'悬疑推理', topic:'mystery'},
+  {label:'历史', topic:'history'},
+  {label:'哲学', topic:'philosophy'},
+  {label:'传记', topic:'biography'},
+  {label:'诗歌', topic:'poetry'},
+  {label:'冒险', topic:'adventure'},
+  {label:'恐怖', topic:'horror'},
+  {label:'爱情', topic:'romance'},
+  {label:'儿童', topic:'children'},
+  {label:'科学', topic:'science'},
+  {label:'戏剧', topic:'drama'},
+  {label:'喜剧', topic:'comedy'}
+];
+const BOOK_MOODS = [
+  {label:'放松', boost:['poetry','fiction','biography']},
+  {label:'充电学习', boost:['science','philosophy','history','biography']},
+  {label:'治愈', boost:['poetry','fiction','children']},
+  {label:'烧脑', boost:['mystery','science fiction','drama']},
+  {label:'催眠', boost:['philosophy','history','science']}
+];
+const BOOK_LANGS = ['中文','英文原著'];
+
+async function fetchGutendex(opts){
+  var base = 'https://gutendex.com/books/?';
+  var p = [];
+  if(opts.q) p.push('search=' + encodeURIComponent(opts.q));
+  if(opts.topic) p.push('topic=' + encodeURIComponent(opts.topic));
+  if(opts.page) p.push('page=' + opts.page);
+  try {
+    var res = await fetch(base + p.join('&'));
+    if(!res.ok) throw new Error('fail');
+    return await res.json();
+  } catch(e){ return {results:[]}; }
+}
+// Gutendex 的 search 参数不支持含空格的词（即使编码也会 404），需拆成单 token
+function gutendexQuery(raw){
+  if(!raw) return '';
+  return String(raw).trim().split(/\s+/)[0]; // 取首个词，避免空格导致 404
+}
+async function fetchOpenLibrary(q){
+  try {
+    var url = 'https://openlibrary.org/search.json?q=' + encodeURIComponent(q) + '&limit=12&fields=title,author_name,first_publish_year,cover_i,key,subject';
+    var res = await fetch(url, {headers:{'User-Agent':'genzy/1.0'}});
+    if(!res.ok) throw new Error('fail');
+    var d = await res.json();
+    return (d.docs||[]).map(function(x){
+      return {
+        id: 'ol-' + (x.key||'').replace(/\W/g,''),
+        title: x.title,
+        authors: (x.author_name||[]).map(function(n){ return {name:n}; }),
+        year: x.first_publish_year,
+        subjects: (x.subject||[]).slice(0,3),
+        cover: x.cover_i ? 'https://covers.openlibrary.org/b/id/' + x.cover_i + '-M.jpg' : null,
+        olKey: x.key,
+        epub: 'https://openlibrary.org' + x.key,
+        external: true
+      };
+    });
+  } catch(e){ return []; }
+}
+function bookCover(b){
+  if(b.external){ return b.cover; }
+  var f = b.formats || {};
+  return f['image/jpeg'] || null;
+}
+function renderBookCard(b){
+  var cover = bookCover(b);
+  var author = (b.authors && b.authors[0]) ? b.authors.map(function(a){ return a.name; }).join(', ') : '佚名';
+  var year = b.year ? ' · ' + b.year : '';
+  var epub = b.external ? b.epub : (b.formats && b.formats['application/epub+zip']);
+  var summary = b.external ? '' : ((b.summaries && b.summaries[0]) ? b.summaries[0] : '');
+  if(summary && summary.length>150) summary = summary.slice(0,150) + '…';
+  var tags = (b.subjects||[]).slice(0,3).map(function(s){ return '<span class="book-tag">'+escapeHtml(String(s).slice(0,12))+'</span>'; }).join('');
+  var coverHtml = '<div class="book-cover" id="bc_'+b.id+'">' + (cover ? '<img src="'+escapeHtml(cover)+'" loading="lazy" onerror="this.parentNode.textContent=\'📖\'">' : '📖') + '</div>';
+  return '<div class="book-rec-card">' + coverHtml +
+    '<div class="book-meta">' +
+      '<div class="book-title">'+escapeHtml(b.title)+'</div>' +
+      '<div class="book-author">'+escapeHtml(author)+year+'</div>' +
+      (summary ? '<div class="book-summary">'+escapeHtml(summary)+'</div>' : '') +
+      (tags ? '<div class="book-tags">'+tags+'</div>' : '') +
+      '<div class="book-actions">' +
+        (epub ? '<a class="btn btn-sm" href="'+escapeHtml(epub)+'" target="_blank" rel="noopener">⬇ '+ (b.external?'在线阅读':'EPUB') +'</a>' : '') +
+        '<a class="btn btn-sm secondary" href="'+(b.external ? escapeHtml(b.epub) : 'https://gutendex.com/books/'+b.id+'/')+'" target="_blank" rel="noopener">详情</a>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+function dayOfYear(){
+  var now = new Date(); var start = new Date(now.getFullYear(),0,0);
+  return Math.floor((now - start)/86400000);
+}
+function bookTopicsFromPrefs(){
+  var prefs = state.books.prefs || {genres:[], moods:[], langs:[]};
+  var topics = [];
+  (prefs.genres||[]).forEach(function(g){ var x = BOOK_GENRES.find(function(y){ return y.label===g; }); if(x) topics.push(x.topic); });
+  (prefs.moods||[]).forEach(function(m){ var x = BOOK_MOODS.find(function(y){ return y.label===m; }); if(x) x.boost.forEach(function(t){ if(topics.indexOf(t)<0) topics.push(t); }); });
+  if(topics.length===0) topics = ['fiction','history','adventure','science','philosophy'];
+  return topics;
+}
+async function loadDailyRecs(){
+  var prefs = state.books.prefs || {genres:[], moods:[], langs:[]};
+  var langs = prefs.langs || [];
+  var topics = bookTopicsFromPrefs();
+  var daySeed = dayOfYear();
+  var collected = [];
+  // Pick up to 3 topics, vary page by day for daily freshness
+  var picks = topics.slice(0, 3);
+  for(var i=0;i<picks.length;i++){
+    var data = await fetchGutendex({topic: picks[i], page: (daySeed + i*3) % 25 + 1});
+    if(data.results && data.results.length){
+      collected = collected.concat(data.results.slice(0,5));
+    }
+  }
+  // Chinese best-effort via Open Library
+  if(langs.indexOf('中文')>=0 && prefs.genres && prefs.genres.length){
+    var cn = await fetchOpenLibrary(prefs.genres[0]);
+    collected = collected.concat(cn);
+  }
+  var seen = {}; collected = collected.filter(function(b){ if(seen[b.id]) return false; seen[b.id]=1; return true; });
+  var cont = document.getElementById('bookRecs');
+  if(cont){
+    if(collected.length){
+      cont.innerHTML = collected.slice(0,10).map(renderBookCard).join('');
+    } else {
+      cont.innerHTML = '<div class="empty">暂时没有匹配的推荐，换个类型试试～</div>';
+    }
+  }
+}
+async function runBookSearch(q){
+  var cont = document.getElementById('bookSearchResults');
+  if(!cont) return;
+  if(!q){ cont.innerHTML = ''; return; }
+  cont.innerHTML = '<div class="empty">搜索中…</div>';
+  var data = await fetchGutendex({q: gutendexQuery(q), page:1});
+  var ol = [];
+  // Open Library 能处理中文与多词，作为补充来源（失败则静默忽略）
+  ol = await fetchOpenLibrary(q);
+  var results = (data.results||[]).concat(ol);
+  var seen={}; results = results.filter(function(b){ if(seen[b.id]) return false; seen[b.id]=1; return true; });
+  if(results.length){
+    cont.innerHTML = results.slice(0,15).map(renderBookCard).join('');
+  } else {
+    cont.innerHTML = '<div class="empty">没有找到相关图书，换个关键词试试</div>';
+  }
+}
+
 // ===== Books =====
 renderers.books = function(){
   const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
@@ -2039,6 +2209,34 @@ renderers.books = function(){
     '</div>' +
     '<div style="margin-bottom:.7rem">' + renderTaskTable(state.books.tasks, 'book') + '</div>' +
     renderTimerUI('book') +
+  '</div>' +
+  // ===== 每日荐书：问卷 + 推荐 + 搜索 =====
+  '<div class="card">' +
+    '<div class="book-sec-title">📚 每日荐书</div>' +
+    '<div class="card-subtitle">先回答几个问题，为你精准推荐（可多选）</div>' +
+    '<div class="book-q"><div class="book-q-h">你最近想读什么类型？</div><div class="book-chips" id="bookGenreChips">' +
+      BOOK_GENRES.map(function(g){ return '<span class="book-chip" data-g="'+escapeHtml(g.label)+'">'+g.label+'</span>'; }).join('') +
+    '</div></div>' +
+    '<div class="book-q"><div class="book-q-h">阅读目的 / 心情？</div><div class="book-chips" id="bookMoodChips">' +
+      BOOK_MOODS.map(function(m){ return '<span class="book-chip" data-m="'+escapeHtml(m.label)+'">'+m.label+'</span>'; }).join('') +
+    '</div></div>' +
+    '<div class="book-q"><div class="book-q-h">语言偏好？</div><div class="book-chips" id="bookLangChips">' +
+      BOOK_LANGS.map(function(l){ return '<span class="book-chip" data-l="'+escapeHtml(l)+'">'+l+'</span>'; }).join('') +
+    '</div></div>' +
+    '<button class="btn btn-block" id="bookGenRec">✨ 生成今日推荐</button>' +
+  '</div>' +
+  '<div class="card">' +
+    '<div class="book-sec-title">🌟 为你推荐</div>' +
+    '<div id="bookRecs"><div class="empty">点击上方「生成今日推荐」获取书单</div></div>' +
+    '<div class="book-src-note">数据来源：Project Gutenberg（古登堡计划）· 免费公版书，含 EPUB 直链</div>' +
+  '</div>' +
+  '<div class="card">' +
+    '<div class="book-sec-title">🔍 搜书</div>' +
+    '<div class="form-row">' +
+      '<input class="input" id="bookSearchInput" placeholder="书名 / 作者 / 关键词">' +
+      '<button class="btn" id="bookSearchBtn">搜索</button>' +
+    '</div>' +
+    '<div id="bookSearchResults" style="margin-top:.5rem"></div>' +
   '</div>';
 };
 initModule.books = function(){
@@ -2054,6 +2252,53 @@ initModule.books = function(){
     });
   });
   initTimer('book');
+  // ===== 荐书：问卷 chips + 生成 + 搜索 =====
+  function syncChips(){
+    var p = state.books.prefs || {genres:[], moods:[], langs:[]};
+    document.querySelectorAll('#bookGenreChips .book-chip').forEach(function(c){
+      c.classList.toggle('active', (p.genres||[]).indexOf(c.dataset.g) >= 0);
+    });
+    document.querySelectorAll('#bookMoodChips .book-chip').forEach(function(c){
+      c.classList.toggle('active', (p.moods||[]).indexOf(c.dataset.m) >= 0);
+    });
+    document.querySelectorAll('#bookLangChips .book-chip').forEach(function(c){
+      c.classList.toggle('active', (p.langs||[]).indexOf(c.dataset.l) >= 0);
+    });
+  }
+  function toggleIn(arr, val){ var i = arr.indexOf(val); if(i>=0) arr.splice(i,1); else arr.push(val); }
+  // 确保 prefs 结构存在（兼容旧数据）
+  if(!state.books.prefs || typeof state.books.prefs !== 'object') state.books.prefs = {};
+  if(!Array.isArray(state.books.prefs.genres)) state.books.prefs.genres = [];
+  if(!Array.isArray(state.books.prefs.moods)) state.books.prefs.moods = [];
+  if(!Array.isArray(state.books.prefs.langs)) state.books.prefs.langs = [];
+  // 事件委托，避免逐个绑定遗漏
+  document.querySelectorAll('#bookGenreChips .book-chip, #bookMoodChips .book-chip, #bookLangChips .book-chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      if(c.dataset.g) toggleIn(state.books.prefs.genres, c.dataset.g);
+      else if(c.dataset.m) toggleIn(state.books.prefs.moods, c.dataset.m);
+      else if(c.dataset.l) toggleIn(state.books.prefs.langs, c.dataset.l);
+      saveState(); syncChips();
+    });
+  });
+  syncChips();
+  var genBtn = document.getElementById('bookGenRec');
+  if(genBtn) genBtn.addEventListener('click', function(){
+    if(!state.books.prefs.genres.length && !state.books.prefs.moods.length){ toast('先选几个感兴趣的类型吧'); return; }
+    genBtn.textContent = '✨ 推荐生成中…'; genBtn.disabled = true;
+    loadDailyRecs().then(function(){
+      genBtn.textContent = '✨ 重新生成推荐'; genBtn.disabled = false;
+      toast('已为你生成今日书单');
+    });
+  });
+  var searchBtn = document.getElementById('bookSearchBtn');
+  var searchInput = document.getElementById('bookSearchInput');
+  function doSearch(){ if(searchInput) runBookSearch(searchInput.value.trim()); }
+  if(searchBtn) searchBtn.addEventListener('click', doSearch);
+  if(searchInput) searchInput.addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(); });
+  // 进入模块时若有偏好，自动生成（每日推荐，每次进入刷新）
+  if(state.books.prefs.genres && state.books.prefs.genres.length){
+    loadDailyRecs();
+  }
 };
 // ===== Timers / Day Matter =====
 renderers.timers = function(){
