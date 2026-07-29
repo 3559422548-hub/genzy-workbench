@@ -391,8 +391,10 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
 .link-card {
   background: var(--card-2); border-radius: var(--radius-sm);
   padding: .85rem; display:flex; flex-direction:column; gap:.35rem;
+  cursor: pointer; transition: background .12s, transform .08s;
 }
-.link-card a { color: var(--accent); text-decoration: none; font-weight: 600; word-break:break-all; font-size: .9rem; }
+.link-card:active { transform: scale(.97); background: color-mix(in srgb, var(--card-2) 85%, var(--text)); }
+.link-card .card-name { font-weight: 600; color: var(--accent); font-size: .9rem; }
 
 /* ===== Audio ===== */
 .audio-box { width:100%; border-radius: var(--radius-sm); margin: .5rem 0; }
@@ -1262,9 +1264,10 @@ function renderLinkCards(links, prefix){
     <div style="margin:.6rem 0"><div class="pill">${escapeHtml(g)}</div>
     <div class="grid-2" style="margin-top:.4rem">
       ${groups[g].map(l=>`
-        <div class="link-card">
-          <a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${escapeHtml(l.name)}</a>
-          <div><button class="btn btn-sm danger ${prefix}DelLink" data-id="${l.id}">删除</button></div>
+        <div class="link-card" data-url="${escapeHtml(l.url)}" onclick="window.open(this.dataset.url,'_blank','noopener');">
+          <div class="card-name">${escapeHtml(l.name)}</div>
+          <div style="font-size:.75rem;color:var(--muted);word-break:break-all;margin-bottom:.2rem">${escapeHtml(l.url)}</div>
+          <div><button class="btn btn-sm danger ${prefix}DelLink" data-id="${l.id}" onclick="event.stopPropagation();">删除</button></div>
         </div>
       `).join('')}
     </div></div>
@@ -1723,57 +1726,231 @@ function generateMusicAnalysis(analyser, filename){
 }
 
 // ===== Books =====
-const FALLBACK_BOOKS = [
-  {id:1342, title:'傲慢与偏见', author:'Jane Austen'},
-  {id:11, title:'爱丽丝梦游仙境', author:'Lewis Carroll'},
-  {id:1661, title:'福尔摩斯探案集', author:'Arthur Conan Doyle'},
-  {id:2701, title:'白鲸记', author:'Herman Melville'},
-  {id:84, title:'弗兰肯斯坦', author:'Mary Shelley'},
-  {id:145, title:' Middlemarch', author:'George Eliot'}
+const CHINESE_BOOKS = [
+  {title:'红楼梦', author:'曹雪芹', genre:'novel', level:'classic', desc:'中国古典四大名著之首，以贾宝玉与林黛玉的爱情悲剧为主线'},
+  {title:'西游记', author:'吴承恩', genre:'novel', level:'classic', desc:'中国古典四大名著，唐僧师徒西天取经的奇幻之旅'},
+  {title:'活着', author:'余华', genre:'novel', level:'medium', desc:'讲述大时代背景下小人物的命运与生存韧性'},
+  {title:'三体', author:'刘慈欣', genre:'sci-fi', level:'medium', desc:'中国科幻里程碑，讲述地球文明与三体文明的首次接触'},
+  {title:'百年孤独', author:'加西亚·马尔克斯', genre:'novel', level:'deep', desc:'魔幻现实主义经典，中文版已深入影响中国文学'},
+  {title:'小王子', author:'圣埃克苏佩里', genre:'novel', level:'light', desc:'写给成年人的童话，中文译本广为流传'},
+  {title:'老人与海', author:'海明威', genre:'novel', level:'medium', desc:'硬汉文学的巅峰之作，中文版深入影响几代人'},
+  {title:'苏东坡传', author:'林语堂', genre:'biography', level:'medium', desc:'一代文豪苏轼的生平与精神世界'},
+  {title:'明朝那些事儿', author:'当年明月', genre:'history', level:'light', desc:'以幽默风趣的笔调讲述明朝三百年历史'},
+  {title:'围城', author:'钱钟书', genre:'novel', level:'medium', desc:'中国现代文学经典，对婚姻与人生的深刻洞察'},
+  {title:'平凡的世界', author:'路遥', genre:'novel', level:'medium', desc:'茅盾文学奖作品，展现普通人在大时代中的奋斗'},
+  {title:'挪威的森林', author:'村上春树', genre:'novel', level:'medium', desc:'日本当代文学经典，中文译本影响广泛'},
+  {title:'人类简史', author:'尤瓦尔·赫拉利', genre:'history', level:'medium', desc:'从认知革命到人工智能的人类宏大历史叙事'},
+  {title:'送你一颗子弹', author:'刘瑜', genre:'essay', level:'light', desc:'当代学者的生活随笔与社会观察'},
+  {title:'时间简史', author:'史蒂芬·霍金', genre:'science', level:'deep', desc:'探索宇宙奥秘的科普经典'},
+  {title:'边城', author:'沈从文', genre:'novel', level:'light', desc:'湘西小镇的纯美爱情故事，中国乡土文学经典'},
+  {title:'骆驼祥子', author:'老舍', genre:'novel', level:'medium', desc:'老北京底层人民的真实写照'},
+  {title:'白夜行', author:'东野圭吾', genre:'mystery', level:'medium', desc:'日本悬疑推理经典，中文版畅销不衰'},
+  {title:'1984', author:'乔治·奥威尔', genre:'novel', level:'deep', desc:'反乌托邦经典，中文译本影响深远'},
+  {title:'局外人', author:'加缪', genre:'philosophy', level:'deep', desc:'存在主义文学代表作，中文译本广受推崇'},
+  {title:'飘', author:'玛格丽特·米切尔', genre:'novel', level:'medium', desc:'美国南北战争背景的爱情史诗'},
+  {title:'哈利·波特与魔法石', author:'J.K.罗琳', genre:'fantasy', level:'light', desc:'全球最畅销的奇幻文学系列'},
+  {title:'牧羊少年奇幻之旅', author:'保罗·科埃略', genre:'novel', level:'light', desc:'关于梦想与追寻的人生寓言'},
+  {title:'银河帝国：基地', author:'艾萨克·阿西莫夫', genre:'sci-fi', level:'medium', desc:'科幻文学史上最经典系列之一'},
+  {title:'活着之上', author:'阎真', genre:'novel', level:'medium', desc:'当代知识分子的生存困境与精神追求'},
+  {title:'杀死一只知更鸟', author:'哈珀·李', genre:'novel', level:'medium', desc:'关于正义与成长的不朽经典'},
+  {title:'追风筝的人', author:'卡勒德·胡赛尼', genre:'novel', level:'medium', desc:'关于友谊、背叛与救赎的感人故事'},
+  {title:'禅与摩托车维修艺术', author:'罗伯特·波西格', genre:'philosophy', level:'deep', desc:'关于生活哲学与自我探索的经典之作'},
+  {title:'黑客与画家', author:'保罗·格雷厄姆', genre:'essay', level:'medium', desc:'硅谷创业思维的启蒙读物'},
+  {title:'费马大定理', author:'西蒙·辛格', genre:'science', level:'medium', desc:'数学史上最迷人的传奇故事'}
 ];
+const BOOK_GENRES = [
+  {id:'novel', label:'📖 小说'},
+  {id:'sci-fi', label:'🚀 科幻'},
+  {id:'history', label:'📜 历史'},
+  {id:'philosophy', label:'💭 哲学'},
+  {id:'mystery', label:'🔍 悬疑'},
+  {id:'fantasy', label:'🦄 奇幻'},
+  {id:'biography', label:'👤 传记'},
+  {id:'essay', label:'✍️ 散文'},
+  {id:'science', label:'🔬 科普'}
+];
+const BOOK_LEVELS = [
+  {id:'light', label:'🌱 轻松入门', desc:'短小精悍，适合碎片时间'},
+  {id:'medium', label:'📚 中等厚度', desc:'篇幅适中，沉浸阅读'},
+  {id:'deep', label:'🎯 经典深度', desc:'大部头/有挑战，值得品味'}
+];
+function recommendBooks(prefs){
+  if (!prefs || !prefs.genre) return CHINESE_BOOKS.slice(0,6);
+  let candidates = CHINESE_BOOKS.filter(b => {
+    let match = false;
+    // Genre
+    if (prefs.genre === 'all' || b.genre === prefs.genre) match = true;
+    // Level filter (optional)
+    if (match && prefs.level && prefs.level !== 'all' && b.level !== prefs.level) match = false;
+    return match;
+  });
+  if (candidates.length < 4) candidates = CHINESE_BOOKS.filter(b => b.genre === prefs.genre);
+  if (candidates.length < 4) candidates = CHINESE_BOOKS;
+  // Shuffle deterministically based on prefs
+  const seed = prefs.genre ? prefs.genre.length * 7 : 42;
+  return candidates.sort((a,b) => (a.title.charCodeAt(0) * seed) % 3 - (b.title.charCodeAt(0) * seed) % 3).slice(0,8);
+}
+async function searchBooks(query){
+  if (!query || query.trim().length < 2) return null;
+  query = query.trim();
+  // Try Open Library for Chinese books
+  try {
+    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&language=chi&limit=8&fields=title,author_name,edition_count,first_publish_year,key`);
+    if (!res.ok) throw new Error('fetch fail');
+    const data = await res.json();
+    if (data.docs && data.docs.length > 0) {
+      return data.docs.map(d => ({
+        title: d.title || query,
+        author: (d.author_name && d.author_name[0]) || '未知',
+        year: d.first_publish_year || '',
+        olKey: d.key,
+        url: d.key ? `https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(d.title)}` : ''
+      })).slice(0,6);
+    }
+  } catch(e) { /* fallback to currated */ }
+  // Fallback: search Chinese book list
+  const q = query.toLowerCase();
+  return CHINESE_BOOKS.filter(b => b.title.includes(query) || b.author.includes(query) || b.genre.includes(query)).slice(0,6);
+}
 renderers.books = function(){
   const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
   if (!isMobile) return `<div class="card"><div class="card-title">📚 书香书屋</div><div class="empty">此模块仅在手机浏览器展示，请用手机访问。</div></div>`;
-  return `<div class="card">
-    <div class="card-title">📚 书香书屋</div>
-    <a href="ibooks://" class="btn" style="margin-bottom:.6rem;width:100%">打开 iPhone 图书 App</a>
-    <div class="card-subtitle">每日推荐 · 点击书名下载 epub</div>
-    <div id="bookList"><div class="empty">正在加载推荐...</div></div>
+  const prefs = state.books.prefs || {};
+  const hasPrefs = prefs.genre ? true : false;
+  // Quiz HTML
+  const quizHtml = hasPrefs ? '' : `
+  <div class="card">
+    <div class="card-title"><span class="ttl">📝 读书偏好问卷</span></div>
+    <div class="card-subtitle">回答几个问题，帮你推荐更适合的书籍</div>
+    <div class="form-group">
+      <label>你喜欢的书籍类型？</label>
+      <div class="segment" id="bookGenreSeg" style="flex-wrap:wrap">
+        ${BOOK_GENRES.map(g=>`<button data-val="${g.id}">${g.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>推荐的阅读深度？</label>
+      <div class="segment" id="bookLevelSeg" style="flex-wrap:wrap">
+        ${BOOK_LEVELS.map(l=>`<button data-val="${l.id}">${l.label}</button>`).join('')}
+      </div>
+    </div>
+    <button class="btn btn-block" id="bookSavePrefs">保存偏好，开始推荐</button>
+  </div>`;
+  // Recommendation or result
+  const recHtml = hasPrefs ? `
+  <div class="card">
+    <div class="card-title">
+      <span class="ttl">📚 推荐书目</span>
+      <button class="btn btn-sm secondary" id="bookResetPrefs">重选偏好</button>
+    </div>
+    <div class="card-subtitle">根据你的偏好（${BOOK_GENRES.find(g=>g.id===prefs.genre)?.label||''} · ${BOOK_LEVELS.find(l=>l.id===prefs.level)?.label||''}），为你推荐：</div>
+    <div id="bookRecList"><div class="empty">📖 正在计算推荐...</div></div>
   </div>
   <div class="card">
-    <div class="card-title">阅读任务</div>
+    <div class="card-title"><span class="ttl">🔍 搜索图书</span></div>
+    <div class="form-row">
+      <input class="input" id="bookSearchInput" placeholder="输入书名、作者或关键词">
+      <button class="btn" id="bookSearchBtn">搜索</button>
+    </div>
+    <div id="bookSearchResult"></div>
+  </div>` : '';
+  return `${quizHtml}${recHtml}
+  <div class="card">
+    <div class="card-title">📖 打开 iBooks</div>
+    <a href="ibooks://" class="btn btn-block" style="margin-bottom:.3rem">打开 iPhone 图书 App</a>
+    <div class="card-subtitle">搜索的书籍可在 iBooks 中免费下载 epub 版本。</div>
+  </div>
+  <div class="card">
+    <div class="card-title">⏱️ 阅读计划 & 计时器</div>
     <div class="form-row">
       <input type="date" class="input" id="bookDate" value="${todayStr()}">
       <input type="time" class="input" id="bookTime">
       <input class="input" id="bookTask" placeholder="阅读页数/章节">
       <button class="btn" id="bookAddTask">加入计划</button>
     </div>
-    <div>${renderTaskTable(state.books.tasks, 'book')}</div>
-  </div>
-  <div class="card">
-    <div class="card-title">阅读计时器</div>
+    <div style="margin-bottom:.7rem">${renderTaskTable(state.books.tasks, 'book')}</div>
     ${renderTimerUI('book')}
   </div>`;
 };
 initModule.books = async function(){
   const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
   if (!isMobile) return;
-  let books = [];
-  try {
-    const res = await fetch('https://gutendex.com/books/?languages=en,zh');
-    const data = await res.json();
-    books = data.results.slice(0,5).map(b=>({id:b.id, title:b.title, author:(b.authors[0]&&b.authors[0].name)||'未知'}));
-  } catch(e){ books = FALLBACK_BOOKS.slice(0,5); }
-  $('#bookList').innerHTML = books.map(b=>`
-    <div class="book-item">
-      <img src="https://www.gutenberg.org/cache/epub/${b.id}/pg${b.id}.cover.medium.jpg" alt="cover" onerror="this.style.display='none'">
-      <div>
-        <div style="font-weight:700">${escapeHtml(b.title)}</div>
-        <div style="font-size:.8rem;color:var(--muted)">${escapeHtml(b.author)}</div>
-        <a class="btn btn-sm" style="margin-top:.3rem" href="https://www.gutenberg.org/ebooks/${b.id}.epub.images" target="_blank" rel="noopener">下载 epub</a>
-      </div>
-    </div>
-  `).join('');
+  const prefs = state.books.prefs || {};
+
+  // === Preference Quiz ===
+  const saveQuiz = () => {
+    const seg = $('#bookGenreSeg');
+    const levelSeg = $('#bookLevelSeg');
+    if (!seg) return;
+    const selected = seg.querySelector('.active');
+    const selectedLevel = levelSeg ? levelSeg.querySelector('.active') : null;
+    if (!selected) { toast('请选择书籍类型'); return; }
+    state.books.prefs = { genre: selected.dataset.val, level: selectedLevel ? selectedLevel.dataset.val : 'medium', setAt: Date.now() };
+    if (state.books.prefsList) delete state.books.prefsList;
+    saveState(); renderContent(); toast('偏好已保存');
+  };
+  if ($('#bookSavePrefs')) $('#bookSavePrefs').addEventListener('click', saveQuiz);
+  // Genre segment
+  $$('#bookGenreSeg button').forEach(b => b.addEventListener('click', ()=>{
+    $$('#bookGenreSeg button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  }));
+  // Level segment
+  $$('#bookLevelSeg button').forEach(b => b.addEventListener('click', ()=>{
+    $$('#bookLevelSeg button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  }));
+  // Reset prefs
+  if ($('#bookResetPrefs')) $('#bookResetPrefs').addEventListener('click', ()=>{
+    delete state.books.prefs; saveState(); renderContent();
+  });
+
+  // === Recommendations ===
+  if (prefs.genre) {
+    const recList = $('#bookRecList');
+    if (recList) {
+      // Use cached prefsList or compute
+      if (state.books.prefsList && state.books.prefsList.genre === prefs.genre) {
+        renderBookList(recList, state.books.prefsList.books);
+      } else {
+        const books = recommendBooks(prefs);
+        state.books.prefsList = { genre: prefs.genre, level: prefs.level, books, at: Date.now() };
+        saveState();
+        renderBookList(recList, books);
+      }
+    }
+  }
+
+  // === Search ===
+  if ($('#bookSearchBtn')) $('#bookSearchBtn').addEventListener('click', async ()=>{
+    const q = $('#bookSearchInput').value.trim();
+    if (!q) { toast('请输入搜索关键词'); return; }
+    const resultDiv = $('#bookSearchResult');
+    resultDiv.innerHTML = '<div class="empty">🔍 正在搜索...</div>';
+    const results = await searchBooks(q);
+    if (!results || results.length === 0) {
+      resultDiv.innerHTML = '<div class="empty">未找到相关书籍，试试其他关键词</div>';
+      return;
+    }
+    // Check if results are from curated list (objects with just title/author) or Open Library
+    const isOl = results[0].olKey !== undefined;
+    resultDiv.innerHTML = results.map(b => `
+      <div class="book-item">
+        <div style="flex:1">
+          <div style="font-weight:700">${escapeHtml(b.title)}</div>
+          <div style="font-size:.8rem;color:var(--muted)">${escapeHtml(b.author)}${b.year ? ' · '+b.year : ''}</div>
+          ${b.olKey ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">来自 Open Library</div>` : `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">中文推荐</div>`}
+        </div>
+        <div>
+          <a class="btn btn-sm" href="https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(b.title)}" target="_blank" rel="noopener">找 epub</a>
+        </div>
+      </div>`).join('');
+  });
+  if ($('#bookSearchInput')) $('#bookSearchInput').addEventListener('keydown', e=>{
+    if (e.key === 'Enter') $('#bookSearchBtn').click();
+  });
+
+  // === Reading tasks & timer ===
   $('#bookAddTask').addEventListener('click', ()=>{
     const date=$('#bookDate').value, time=$('#bookTime').value, text=$('#bookTask').value.trim();
     if(!text) return; state.books.tasks.push({id:uid(), date, time, text}); addDailyTask(date, text, 'books', time); saveState(); renderContent(); toast('阅读计划已添加');
@@ -1784,6 +1961,21 @@ initModule.books = async function(){
   }));
   initTimer('book');
 };
+function renderBookList(container, books){
+  if (!books || !books.length) { container.innerHTML = '<div class="empty">暂无推荐，试试其他偏好</div>'; return; }
+  container.innerHTML = books.map(b => `
+    <div class="book-item">
+      <div style="flex:1">
+        <div style="font-weight:700">${escapeHtml(b.title)}</div>
+        <div style="font-size:.8rem;color:var(--muted)">${escapeHtml(b.author)}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">💡 ${escapeHtml(b.desc || '经典好书推荐')}</div>
+      </div>
+      <div>
+        <a class="btn btn-sm" href="https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(b.title)}" target="_blank" rel="noopener">找 epub</a>
+      </div>
+    </div>
+  `).join('');
+}
 
 // ===== Timers / Day Matter =====
 renderers.timers = function(){
