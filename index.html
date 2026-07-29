@@ -489,6 +489,50 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
 .grid-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap:.8rem; }
 @media (max-width: 480px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
 
+
+/* ===== Diary ===== */
+.diary-header {
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;
+}
+.diary-header h3 { font-size:1.5rem;font-weight:700;margin:0; }
+.diary-header .hdr-right { display:flex;gap:.5rem;align-items:center;font-size:.9rem;color:var(--muted); }
+.diary-cal-grid {
+  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:.3rem 0;
+}
+.diary-cal-cell {
+  aspect-ratio:1;border-radius:50%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;
+  background:var(--card-2);cursor:pointer;transition:transform .08s;
+  font-size:.85rem;font-weight:600;position:relative;
+}
+.diary-cal-cell:active{transform:scale(.92);}
+.diary-cal-cell.today{box-shadow:0 0 0 2px var(--accent);}
+.diary-cal-cell.future{opacity:.4;}
+.diary-cal-cell .mood-small{font-size:1.2rem;line-height:1;}
+.diary-mood-picker {
+  display:flex;flex-wrap:wrap;gap:8px;margin:.4rem 0;align-items:center;
+}
+.diary-mood-btn {
+  font-size:1.8rem;width:3rem;height:3rem;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--card-2);border:2px solid transparent;cursor:pointer;transition:transform .08s;
+}
+.diary-mood-btn:active{transform:scale(.9);}
+.diary-mood-btn.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent)12%,var(--card-2));}
+.diary-mood-add {
+  font-size:1.2rem;width:2.5rem;height:2.5rem;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--card-2);border:1px dashed var(--muted);cursor:pointer;color:var(--muted);
+}
+.diary-bottle-card {
+  display:flex;gap:.5rem;padding:.5rem;background:var(--card-2);border-radius:12px;margin-bottom:.4rem;
+}
+.diary-bottle-card .emoji{font-size:1.6rem;}
+.diary-bottle-card .meta{flex:1;min-width:0;}
+.diary-bottle-card .date{font-size:.72rem;color:var(--muted);}
+.diary-bottle-card .text{font-size:.85rem;line-height:1.4;white-space:pre-wrap;word-break:break-word;}
+.diary-bottle-card.pending .text{filter:blur(4px);user-select:none;cursor:not-allowed;}
+
 /* ===== Link cards (masonry-style) ===== */
 .links-masonry {
   column-count: 2;
@@ -804,6 +848,8 @@ function loadState(){
     homework: Storage.get('homework', {images:[], tasks:[]}),
     books: Storage.get('books', {tasks:[], timer:{}}),
     kitchen: Storage.get('kitchen', {}),
+    diary: Storage.get('diary', {entries:{}, bottles:[], moods:null})
+  ,weather: Storage.get('weather', {city:'北京',data:null}),
     timers: Storage.get('timers', {events:[], stopwatch:{running:false,startTime:null,elapsed:0}, countdown:{target:null,running:false}})
   };
   if (!state.daily.tasks) state.daily.tasks = {};
@@ -836,6 +882,7 @@ $('#modalOverlay').addEventListener('click', e=>{ if(e.target.id==='modalOverlay
 
 const MODULES = [
   {id:'daily', label:'每日计划', icon:'🌲'},
+  {id:'weather', label:'每日天气', icon:'🌤️'},
   {id:'english', label:'外语学习', icon:'🔁'},
   {id:'fitness', label:'健身训练', icon:'💪'},
   {id:'collections', label:'内容收藏', icon:'⭐'},
@@ -843,6 +890,7 @@ const MODULES = [
   {id:'homework', label:'作业完成', icon:'📝'},
   
   {id:'kitchen', label:'饭香厨房', icon:'🍳'},
+  {id:'diary', label:'记日记天', icon:'📔'},
   {id:'books', label:'书香书屋', icon:'📚'},
   {id:'timers', label:'计时记日', icon:'⏱️'}
 ];
@@ -1360,7 +1408,19 @@ renderers.english = function(){
     }).join('') : '<div class="empty"><div class="ico">📖</div>还没有学习计划，添加一个吧</div>'}
   </div>`;
 
-return launchCard + formCard + plansCard;
+
+  const vocabWord = getCurrentVocab();
+  var vocabCard = '<div class="card" style="background:#e8f5e9;padding:1rem;border-radius:18px">' +
+    '<div style="background:#fff;border-radius:14px;padding:1rem;box-shadow:0 2px 12px rgba(0,0,0,.08)">' +
+      '<div style="font-size:1.8rem;font-weight:800;color:#1a73e8;line-height:1.2">' + escapeHtml(vocabWord.w) + '</div>' +
+      '<div style="font-size:1rem;color:#64b5f6;margin-top:.15rem">' + escapeHtml(vocabWord.ph) + '</div>' +
+      '<div style="font-size:.9rem;color:#222;margin-top:.5rem;line-height:1.4">' + escapeHtml(vocabWord.t) + '</div>' +
+      (vocabWord.e ? '<div style="font-size:.8rem;color:#666;margin-top:.5rem;line-height:1.5;padding-top:.5rem;border-top:1px solid #eee">' + escapeHtml(vocabWord.e).replace(new RegExp(escapeHtml(vocabWord.w),'gi'),'<span style="color:#1a73e8;font-weight:700">$&</span>') + '</div>' : '') +
+      '<button class="btn btn-sm secondary" id="speakWordBtn" style="margin-top:.6rem;width:100%">' + String.fromCharCode(128266) + ' 听发音</button>' +
+    '</div>' +
+    '<div style="font-size:.68rem;color:#888;margin-top:.4rem;text-align:center">每小时自动更新 · 今日第 ' + (new Date().getHours()+1) + ' 张卡片</div>' +
+  '</div>';
+  return launchCard + vocabCard + formCard + plansCard;;
 };
 initModule.english = function(){
   // Migration on entry (idempotent)
@@ -1372,6 +1432,14 @@ initModule.english = function(){
   // App launcher
   const echoCard = $('#enOpenEcho');
   if (echoCard) echoCard.addEventListener('click', ()=> openApp('shortcuts://run-shortcut?name=Echo%20Loop', 'https://www.echo-loop.top/zh-CN'));
+
+  // Flashcard speak
+  var speakBtn = document.getElementById('speakWordBtn');
+  if(speakBtn) speakBtn.addEventListener('click', function(){ speakWord(getCurrentVocab().w); });
+  // Auto-refresh flashcard every hour
+  var nextHourMs = (60 - new Date().getMinutes()) * 60 * 1000;
+  if(typeof _autoRefreshTimer !== 'undefined') clearTimeout(_autoRefreshTimer);
+  var _autoRefreshTimer = setTimeout(function(){ if(currentModule==='english') renderContent(); }, Math.min(nextHourMs, 3600000));
   const duoCard = $('#enOpenDuolingo');
   if (duoCard) duoCard.addEventListener('click', ()=> openApp('duolingo://', 'https://www.duolingo.com'));
 
@@ -1937,6 +2005,269 @@ renderers.kitchen = function(){
 initModule.kitchen = function(){};
 
 
+
+
+// ===== Diary =====
+const DEFAULT_MOODS = ['😊','😢','😡','😴','🤩','🥰','😎','😅','🥲','😈'];
+renderers.diary = function(){
+  const today = todayStr();
+  const [y,m] = state.diary._calDate ? state.diary._calDate.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth()+1];
+  const firstDay = new Date(y,m-1,1); const lastDay = new Date(y,m,0).getDate();
+  const startWeek = firstDay.getDay(); // 0=Sun
+  const weeks = []; let week = new Array(startWeek).fill(null);
+  for(let d=1;d<=lastDay;d++){ week.push(d); if(week.length===5){ weeks.push(week); week=[]; } }
+  if(week.length){ while(week.length<5)week.push(null); weeks.push(week); }
+  const entries = state.diary.entries||{};
+  const moods = state.diary.moods||DEFAULT_MOODS;
+  const bottles = (state.diary.bottles||[]).filter(b=>b.openDate<=today).sort((a,b)=>a.openDate.localeCompare(b.openDate));
+  const upc = (state.diary.bottles||[]).filter(b=>b.openDate>today).sort((a,b)=>a.openDate.localeCompare(b.openDate));
+  const monthLabel = y + '年' + m + '月';
+  return '<div class="card"><div class="diary-header"><h3>' + monthLabel + '</h3><div class="hdr-right">' +
+    '<button class="btn btn-sm secondary" id="diaryPrev">‹‹</button>' +
+    '<button class="btn btn-sm secondary" id="diaryToday">🌟</button>' +
+    '<button class="btn btn-sm secondary" id="diaryNext">››</button></div></div>' +
+    '<div class="diary-cal-grid">' +
+    weeks.map(w => w.map(d => {
+      if(d===null) return '<div class="diary-cal-cell" style="background:transparent;cursor:default"></div>';
+      const ds = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const e = entries[ds]; const isToday = ds===today; const isFut = ds>today;
+      return '<div class="diary-cal-cell' + (isToday?' today':'') + (isFut?' future':'') + '" data-date="' + ds + '">' +
+        '<span>' + d + '</span>' + (e ? '<span class="mood-small">' + e.mood + '</span>' : '') + '</div>';
+    }).join('')).join('') + '</div></div>' +
+    '<div class="card"><div class="card-title"><span class="ttl">' + String.fromCharCode(128200) + ' 每日心情</span></div>' +
+    '<div class="card-subtitle">点击选一个 emoji 作为今天的心情，可在输入框中添加自定义 emoji</div>' +
+    '<div class="diary-mood-picker">' +
+    moods.map(mo => '<button class="diary-mood-btn" data-emoji="' + mo + '">' + mo + '</button>').join('') +
+    '<button class="diary-mood-add" id="diaryMoodAdd">+</button></div>' +
+    '<div class="form-row" style="margin-top:.3rem;display:none" id="diaryMoodInputRow">' +
+    '<input class="input" id="diaryMoodInput" placeholder="粘贴或输入新 emoji" style="flex:1">' +
+    '<button class="btn btn-sm" id="diaryMoodConfirm">添加</button></div>' +
+    '<div class="form-group" style="margin-top:.5rem"><textarea class="input" id="diaryText" rows="3" placeholder="给今天的自己写几句话.."></textarea></div>' +
+    '<button class="btn btn-block" id="diarySave">' + String.fromCharCode(128190) + ' 保存今日日记</button></div>' +
+    '<div class="card"><div class="card-title"><span class="ttl">' + String.fromCharCode(127862) + ' 漂流瓶</span></div>' +
+    '<div class="card-subtitle">给未来的自己写一封信</div>' +
+    '<div class="form-group"><textarea class="input" id="bottleText" rows="2" placeholder="写下你想说的话.."></textarea></div>' +
+    '<div class="form-row"><input type="date" class="input" id="bottleDate"><button class="btn" id="bottleSave">扔进海里</button></div>' +
+    (bottles.length ? '<div style="margin-top:.5rem"><div class="pill accent">已开启</div>' +
+      bottles.map(b => '<div class="diary-bottle-card"><span class="emoji">' + String.fromCharCode(127862) + '</span><div class="meta"><div class="date">' + b.openDate + '</div><div class="text">' + escapeHtml(b.text) + '</div><button class="btn btn-sm danger" data-id="' + b.id + 'BDel" style="margin-top:.3rem">删除</button></div></div>').join('') +
+    '</div>' : '') +
+    (upc.length ? '<div style="margin-top:.5rem"><div class="pill">等待中</div>' +
+      upc.map(b => '<div class="diary-bottle-card pending"><span class="emoji">' + String.fromCharCode(129051) + '</span><div class="meta"><div class="date">' + b.openDate + ' 开启</div><div class="text">' + escapeHtml(b.text) + '</div><button class="btn btn-sm danger" data-id="' + b.id + 'BDel" style="margin-top:.3rem">删除</button></div></div>').join('') +
+    '</div>' : '') + '</div>';
+};
+initModule.diary = function(){
+  const today = todayStr();
+  // Calendar nav
+  const shift = (d) => {
+    const curr = state.diary._calDate || today;
+    const [yy,mm,dd] = curr.split('-').map(Number);
+    const dt = new Date(yy,mm-1+d,1);
+    state.diary._calDate = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-01';
+    saveState(); renderContent();
+  };
+  var el = function(id){ return document.getElementById(id); };
+  var btn = el('diaryPrev'); if(btn) btn.onclick = function(){ shift(-1); };
+  btn = el('diaryNext'); if(btn) btn.onclick = function(){ shift(1); };
+  btn = el('diaryToday'); if(btn) btn.onclick = function(){ delete state.diary._calDate; saveState(); renderContent(); };
+  // Click day
+  document.querySelectorAll('.diary-cal-cell:not([style*="transparent"])').forEach(function(cell){
+    cell.addEventListener('click', function(){
+      var ds = cell.dataset.date;
+      if(!ds) return;
+      var e = (state.diary.entries||{})[ds];
+      var cnt = e ? '<div style="text-align:center;font-size:3rem;margin:.5rem 0">'+e.mood+'</div><div style="white-space:pre-wrap;font-size:.9rem;line-height:1.5">'+escapeHtml(e.text||'（无文字）')+'</div>' : '<div class="empty"><div class="ico">'+String.fromCharCode(128221)+'</div>这天还没有日记</div>';
+      var html = '<div class="modal-content"><div class="modal-title">'+String.fromCharCode(128214)+' '+ds+' 的日记</div><div style="margin-top:1rem">'+cnt+'</div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">关闭</button></div></div>';
+      el('modal').innerHTML = html; el('modalOverlay').classList.add('show');
+    });
+  });
+  // Mood
+  var moods = state.diary.moods || DEFAULT_MOODS;
+  document.querySelectorAll('.diary-mood-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('.diary-mood-btn').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+    });
+  });
+  var existing = (state.diary.entries||{})[today];
+  if(existing){
+    var ta = el('diaryText'); if(ta) ta.value = existing.text;
+    document.querySelectorAll('.diary-mood-btn').forEach(function(b){
+      if(b.dataset.emoji===existing.mood) b.classList.add('active');
+    });
+  }
+  var saveBtn = el('diarySave');
+  if(saveBtn) saveBtn.addEventListener('click', function(){
+    var moodEl = document.querySelector('.diary-mood-btn.active');
+    if(!moodEl){ toast('请先选一个心情'); return; }
+    var text = (el('diaryText').value||'').trim();
+    state.diary.entries[today] = { mood: moodEl.dataset.emoji, text: text, ts: Date.now() };
+    saveState(); toast('日记已保存');
+  });
+  // Add custom mood
+  var addBtn = el('diaryMoodAdd');
+  if(addBtn) addBtn.addEventListener('click', function(){
+    var row = el('diaryMoodInputRow');
+    row.style.display = row.style.display==='none' ? 'flex' : 'none';
+  });
+  var cfm = el('diaryMoodConfirm');
+  if(cfm) cfm.addEventListener('click', function(){
+    var input = el('diaryMoodInput');
+    var val = (input.value||'').trim();
+    if(!val){ toast('请输入 emoji'); return; }
+    state.diary.moods = state.diary.moods || DEFAULT_MOODS;
+    state.diary.moods.push(val);
+    saveState(); renderContent();
+  });
+  // Bottle
+  var bBtn = el('bottleSave');
+  if(bBtn) bBtn.addEventListener('click', function(){
+    var text = (el('bottleText').value||'').trim();
+    var date = el('bottleDate').value;
+    if(!text){ toast('请写一些内容'); return; }
+    if(!date){ toast('请选择开启日期'); return; }
+    state.diary.bottles = state.diary.bottles || [];
+    state.diary.bottles.push({ id: uid(), text: text, openDate: date, writtenDate: today });
+    saveState(); toast('漂流瓶已投入大海'); renderContent();
+  });
+  document.querySelectorAll('.diary-bottle-card .btn.danger').forEach(function(b){
+    b.addEventListener('click', function(){
+      var id = b.dataset.id.replace('BDel','');
+      state.diary.bottles = state.diary.bottles.filter(function(x){ return x.id!==id; });
+      saveState(); renderContent();
+    });
+  });
+};
+
+// ===== Weather =====
+async function fetchWeather(lat, lon){
+  try {
+    var res = await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto');
+    if(!res.ok) throw new Error('fail');
+    return await res.json();
+  } catch(e){ return null; }
+}
+const WMO_CODES = {
+  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',
+  61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',80:'🌦️',81:'🌦️',82:'🌧️',
+  95:'⛈️',96:'⛈️',99:'⛈️'
+};
+const WMO_NAMES = {0:'晴朗',1:'少云',2:'多云',3:'阴天',45:'雾',48:'雾',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'小阵雨',81:'中阵雨',82:'大阵雨',95:'雷暴',96:'雷暴',99:'雷暴'};
+
+renderers.weather = function(){
+  var d = state.weather;
+  if(!d || d.error) return '<div class="card"><div class="card-title">' + String.fromCharCode(127781) + ' 每日天气</div><div class="empty">天气数据加载中..</div><button class="btn btn-block secondary" id="weatherRetry">重试</button></div>';
+  if(!d.data) return '<div class="card"><div class="card-title">' + String.fromCharCode(127781) + ' 每日天气</div><div class="empty">' + (d.loading?'加载中..':'无法获取天气，<button class="btn btn-sm secondary" id="weatherRetry">重试</button>') + '</div></div>';
+  var cx = d.data.current; var dy = d.data.daily;
+  var code = cx.weather_code; var emoji = WMO_CODES[code] || '☀️'; var name = WMO_NAMES[code] || '未知';
+  return '<div class="card"><div class="card-title"><span class="ttl">' + String.fromCharCode(127781) + ' 每日天气</span><span class="pill">' + escapeHtml(d.city) + '</span></div>' +
+    '<div style="display:flex;align-items:center;gap:1rem;margin:.3rem 0">' +
+      '<div style="font-size:4rem">' + emoji + '</div>' +
+      '<div style="flex:1"><div style="font-size:2.8rem;font-weight:800">' + Math.round(cx.temperature_2m) + '°</div>' +
+      '<div style="color:var(--muted);font-size:.85rem">体感 ' + Math.round(cx.apparent_temperature) + '° · ' + name + '</div></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:.5rem;font-size:.78rem;color:var(--muted);margin:.3rem 0">' +
+      '<span>' + String.fromCharCode(128167) + ' ' + Math.round(cx.relative_humidity_2m) + '%</span>' +
+      '<span>' + String.fromCharCode(127788) + ' ' + Math.round(cx.wind_speed_10m) + ' km/h</span>' +
+    '</div>' +
+    (dy ? '<div style="margin-top:.5rem"><div class="pill">今明预报</div><div class="grid-2" style="margin-top:.4rem">' +
+      [0,1].map(function(i){
+        var ec = WMO_CODES[dy.weather_code[i]] || '☀️';
+        var day = i===0 ? '今天' : '明天';
+        return '<div style="text-align:center;padding:.3rem;background:var(--card-2);border-radius:10px">' +
+          '<div style="font-size:.78rem;color:var(--muted)">' + day + '</div>' +
+          '<div style="font-size:1.6rem">' + ec + '</div>' +
+          '<div><span style="font-weight:600">' + Math.round(dy.temperature_2m_max[i]) + '°</span> <span style="color:var(--muted);font-size:.78rem">' + Math.round(dy.temperature_2m_min[i]) + '°</span></div>' +
+          (dy.precipitation_probability_max ? '<div style="font-size:.72rem;color:#5ac8fa">' + String.fromCharCode(127784) + ' ' + dy.precipitation_probability_max[i] + '%</div>' : '') +
+        '</div>';
+      }).join('') +
+    '</div></div>' : '') +
+    '<div style="font-size:.68rem;color:var(--muted);margin-top:.4rem">数据来源 Open-Meteo·' + new Date().toLocaleTimeString('zh-CN') + '更新</div></div>';
+};
+initModule.weather = function(){
+  var retry = document.getElementById('weatherRetry');
+  if(retry) retry.addEventListener('click', function(){ loadWeather(); });
+};
+var _weatherLoaded = false;
+function loadWeather(){
+  if(_weatherLoaded) return;
+  _weatherLoaded = true;
+  if(state.weather && state.weather.data && state.weather.data.current) return;
+  state.weather = state.weather || {};
+  state.weather.city = state.weather.city || '北京';
+  state.weather.loading = true;
+  if(typeof renderContent === 'function') renderContent();
+  // Try geolocation, fallback to Beijing
+  function doFetch(lat, lon, city){
+    fetchWeather(lat, lon).then(function(data){
+      if(data){
+        state.weather.data = data; state.weather.city = city; state.weather.loading = false; state.weather.error = false;
+        state.weather.lastUpdate = Date.now();
+      } else {
+        state.weather.error = true;
+      }
+      _weatherLoaded = false;
+      if(typeof renderContent === 'function') renderContent();
+    });
+  }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      function(pos){ doFetch(pos.coords.latitude, pos.coords.longitude, getCityFromCoords(pos.coords.latitude, pos.coords.longitude)); },
+      function(){ doFetch(39.9, 116.4, '北京'); }
+    );
+  } else {
+    doFetch(39.9, 116.4, '北京');
+  }
+}
+function getCityFromCoords(lat, lon){
+  if(lat>30&&lat<35&&lon>118&&lon<123) return '上海附近';
+  if(lat>22&&lat<24&&lon>113&&lon<115) return '广州附近';
+  if(lat>39&&lat<41&&lon>115&&lon<118) return '北京附近';
+  return '当前定位';
+}
+
+// ===== English flashcards =====
+var VOCAB_LIST = [
+  {w:'serendipity', t:'意外发现美好事物的能力', e:'Meeting her was pure serendipity.'},
+  {w:'ubiquitous', t:'无处不在的', e:'Smartphones have become ubiquitous.'},
+  {w:'ephemeral', t:'短暂的', e:'The beauty of cherry blossoms is ephemeral.'},
+  {w:'resilient', t:'有弹性的；坚韧的', e:'Children are remarkably resilient.'},
+  {w:'ambiguous', t:'模棱两可的', e:'The statement was deliberately ambiguous.'},
+  {w:'eloquent', t:'雄辩的；有口才的', e:'She gave an eloquent speech.'},
+  {w:'empathy', t:'共情；同理心', e:'We need more empathy in the world.'},
+  {w:'nostalgia', t:'怀旧；乡愁', e:'The song filled me with nostalgia.'},
+  {w:'procrastinate', t:'拖延', e:'Stop procrastinating and start working!'},
+  {w:'whimsical', t:'异想天开的', e:'The garden had a whimsical design.'},
+  {w:'ponder', t:'深思；琢磨', e:'He pondered the meaning of life.'},
+  {w:'melancholy', t:'忧郁；愁思', e:'A sense of melancholy settled over her.'},
+  {w:'resilience', t:'韧性；恢复力', e:'Resilience is key to overcoming challenges.'},
+  {w:'epiphany', t:'顿悟', e:'He had an epiphany about his career.'},
+  {w:'serene', t:'宁静的', e:'The lake was perfectly serene.'},
+  {w:'vivacious', t:'活泼的；充满活力的', e:'She has a vivacious personality.'},
+  {w:'exuberant', t:'热情洋溢的', e:'The crowd was exuberant after the win.'},
+  {w:'nonchalant', t:'若无其事的；冷淡的', e:'He tried to look nonchalant.'},
+  {w:'pragmatic', t:'务实的', e:'We need a pragmatic approach.'},
+  {w:'candid', t:'坦诚的；直率的', e:'Thank you for your candid feedback.'},
+  {w:'fervent', t:'热烈的；强烈的', e:'She is a fervent advocate for change.'},
+  {w:'conscientious', t:'尽责的', e:'He is a conscientious worker.'},
+  {w:'prolific', t:'多产的', e:'She is a prolific writer.'},
+  {w:'enigmatic', t:'神秘的', e:'His enigmatic smile puzzled everyone.'},
+  {w:'penchant', t:'嗜好；倾向', e:'She has a penchant for adventure.'}
+];
+
+function getCurrentVocab(){
+  var h = new Date().getHours();
+  var item = VOCAB_LIST[h % VOCAB_LIST.length] || VOCAB_LIST[0];
+  // Generate simple phonetic
+  if(!item.ph) item.ph = '/' + item.w.replace(/[aeiou]+/g,'æ').toLowerCase() + '/';
+  return item;
+}
+function speakWord(word){
+  try {
+    var u = new SpeechSynthesisUtterance(word);
+    u.lang = 'en-US'; u.rate = 0.85;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch(e){}
+}
 
 // ===== Boot =====
 loadState();
