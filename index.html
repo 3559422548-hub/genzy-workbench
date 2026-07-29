@@ -610,7 +610,6 @@ function loadState(){
     collections: Storage.get('collections', {groups:['默认'], links:[]}),
     bills: Storage.get('bills', {expenses:{}, savings:0, savingsHistory:[]}),
     homework: Storage.get('homework', {images:[], tasks:[]}),
-    music: Storage.get('music', {planProgress:{}, qaHistory:[], analyses:[]}),
     books: Storage.get('books', {tasks:[], timer:{}}),
     kitchen: Storage.get('kitchen', {}),
     timers: Storage.get('timers', {events:[], stopwatch:{running:false,startTime:null,elapsed:0}, countdown:{target:null,running:false}})
@@ -630,7 +629,6 @@ function saveState(){
     Storage.set('collections', state.collections);
     Storage.set('bills', state.bills);
     Storage.set('homework', state.homework);
-    Storage.set('music', state.music);
     Storage.set('books', state.books);
     Storage.set('timers', state.timers);
   }, 200);
@@ -651,7 +649,7 @@ const MODULES = [
   {id:'collections', label:'内容收藏', icon:'⭐'},
   {id:'bills', label:'消费记账', icon:'💰'},
   {id:'homework', label:'作业完成', icon:'📝'},
-  {id:'music', label:'编曲学习', icon:'🎹'},
+  
   {id:'kitchen', label:'饭香厨房', icon:'🍳'},
   {id:'books', label:'书香书屋', icon:'📚'},
   {id:'timers', label:'计时记日', icon:'⏱️'}
@@ -1597,150 +1595,6 @@ const STYLE_GUIDES = {
   'rock':'Rock：强力和弦、失真吉他、贝斯与鼓锁紧，Verse 轻 Chorus 重，桥段做动态对比。',
   'lo-fi hip-hop':'Lo-fi Hip-hop：简单和弦 loop、爵士采样、鼓组 swing、 vinyl crackle/雨声营造氛围。'
 };
-renderers.music = function(){
-  return `<div class="card">
-    <div class="card-title">🎹 编曲学习计划</div>
-    ${MUSIC_TOPICS.map(t=>`
-      <div class="plan-node">
-        <div class="node-title"><input type="checkbox" class="musicCheck" data-id="${t.id}" ${state.music.planProgress[t.id]?'checked':''}> ${t.title}</div>
-        <div style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem">${t.items.join(' · ')}</div>
-      </div>
-    `).join('')}
-  </div>
-  <div class="card">
-    <div class="card-title">编曲小助手</div>
-    <div class="form-row">
-      <input class="input" id="musicQ" placeholder="提问：如何扒带？House 鼓怎么写？">
-      <button class="btn" id="musicAsk">提问</button>
-    </div>
-    <div id="musicA" style="margin-top:.5rem"></div>
-    <div style="margin-top:.8rem"><div class="card-subtitle">风格速查</div>
-      ${Object.entries(STYLE_GUIDES).map(([k,v])=>`<div class="pill" style="margin:.15rem">${k}</div>`).join('')}
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">音频/视频分析</div>
-    <div class="form-row">
-      <input type="file" class="input" id="musicFile" accept="audio/*,video/*">
-      <button class="btn" id="musicAnalyze">开始分析</button>
-    </div>
-    <audio id="musicAudio" class="audio-box" controls style="display:none"></audio>
-    <video id="musicVideo" class="audio-box" controls style="display:none;max-height:220px"></video>
-    <canvas id="musicCanvas" width="600" height="120" style="display:none;margin-top:.5rem"></canvas>
-    <div id="musicAnalysisResult"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">歌曲结构可视化</div>
-    <svg viewBox="0 0 600 100" style="width:100%;background:#111;border-radius:10px">
-      <rect x="10" y="20" width="80" height="60" fill="#3b82f6" rx="8"/><text x="50" y="55" text-anchor="middle" fill="#fff" font-size="12">Intro</text>
-      <rect x="100" y="20" width="140" height="60" fill="#22c55e" rx="8"/><text x="170" y="55" text-anchor="middle" fill="#fff" font-size="12">Verse</text>
-      <rect x="250" y="20" width="140" height="60" fill="#f59e0b" rx="8"/><text x="320" y="55" text-anchor="middle" fill="#fff" font-size="12">Chorus</text>
-      <rect x="400" y="20" width="90" height="60" fill="#a855f7" rx="8"/><text x="445" y="55" text-anchor="middle" fill="#fff" font-size="12">Bridge</text>
-      <rect x="500" y="20" width="90" height="60" fill="#ef4444" rx="8"/><text x="545" y="55" text-anchor="middle" fill="#fff" font-size="12">Outro</text>
-    </svg>
-  </div>`;
-};
-initModule.music = function(){
-  $$('.musicCheck').forEach(ch=> ch.addEventListener('change', ()=>{
-    state.music.planProgress[ch.dataset.id]=ch.checked; saveState(); toast('进度已保存');
-  }));
-  $('#musicAsk').addEventListener('click', ()=>{
-    const q=$('#musicQ').value.trim(); if(!q) return;
-    const lower=q.toLowerCase();
-    let a='';
-    if (lower.includes('扒')) a='扒带步骤：1. 听低音/根音 2. 确定调性 3. 听和弦色彩（大/小/七） 4. 记录节奏型 5. 对照原曲修正。';
-    else if (lower.includes('house')) a=STYLE_GUIDES['house'];
-    else if (lower.includes('jazz')) a=STYLE_GUIDES['jazz'];
-    else if (lower.includes('rnb')||lower.includes('r&b')) a=STYLE_GUIDES['rnb'];
-    else if (lower.includes('rock')) a=STYLE_GUIDES['rock'];
-    else if (lower.includes('ableton')) a='Ableton 建议从 Session View 即兴触发 clip 开始，再进入 Arrangement 精排。';
-    else if (lower.includes('混音')) a='混音核心：平衡音量 → EQ 分频 → 压缩控制动态 → 空间效果（混响/延迟）→ 母带限制器。';
-    else a='好的问题！建议先从“乐理基础→Ableton 界面→风格鼓组→完成整首歌”的顺序推进。';
-    $('#musicA').innerHTML = `<div class="card" style="background:var(--accent-soft)">${escapeHtml(a)}</div>`;
-    state.music.qaHistory.push({q,a,date:Date.now()}); saveState();
-  });
-  let audioCtx, analyser, source, animationId;
-  $('#musicAnalyze').addEventListener('click', async ()=>{
-    const f=$('#musicFile').files[0]; if(!f){ toast('请选择音频或视频'); return; }
-    const url=URL.createObjectURL(f);
-    const isVideo = f.type.startsWith('video');
-    const audio=$('#musicAudio'); const video=$('#musicVideo'); const canvas=$('#musicCanvas');
-    if (isVideo) { video.src=url; video.style.display='block'; audio.style.display='none'; }
-    else { audio.src=url; audio.style.display='block'; video.style.display='none'; }
-    canvas.style.display='block';
-    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    const el = isVideo?video:audio;
-    try {
-      if (source) source.disconnect();
-      source = audioCtx.createMediaElementSource(el);
-      analyser = audioCtx.createAnalyser(); analyser.fftSize=2048;
-      source.connect(analyser); analyser.connect(audioCtx.destination);
-      el.play();
-      drawSpectrum(canvas, analyser);
-      // Static analysis after a few seconds
-      setTimeout(()=> generateMusicAnalysis(analyser, f.name), 3500);
-    } catch(e){ toast('分析失败：'+e.message); }
-  });
-};
-function drawSpectrum(canvas, analyser){
-  if (!canvas || !canvas.isConnected) return;
-  const ctx=canvas.getContext('2d');
-  const data=new Uint8Array(analyser.frequencyBinCount);
-  let af;
-  function frame(){
-    if (!canvas.isConnected) { cancelAnimationFrame(af); return; }
-    analyser.getByteFrequencyData(data);
-    ctx.fillStyle='#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    const bars=60, barW=canvas.width/bars;
-    for(let i=0;i<bars;i++){
-      const v=data[Math.floor(i*data.length/bars)]/255;
-      const h=v*canvas.height;
-      ctx.fillStyle = `hsl(${200+v*80}, 80%, ${30+v*40}%)`;
-      ctx.fillRect(i*barW+1, canvas.height-h, barW-2, h);
-    }
-    af = requestAnimationFrame(frame);
-  }
-  frame();
-}
-function generateMusicAnalysis(analyser, filename){
-  const data=new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteFrequencyData(data);
-  const bands = {bass:0, lowMid:0, mid:0, high:0};
-  const sr = analyser.context.sampleRate;
-  const bin = sr/2/data.length;
-  let total=0;
-  data.forEach((v,i)=>{
-    const f=i*bin; total+=v;
-    if(f<80) bands.bass+=v;
-    else if(f<250) bands.lowMid+=v;
-    else if(f<2000) bands.mid+=v;
-    else bands.high+=v;
-  });
-  const max = Math.max(bands.bass, bands.lowMid, bands.mid, bands.high, 1);
-  const likely = [];
-  if (bands.bass/max > .35) likely.push('Kick / Bass');
-  if (bands.lowMid/max > .3) likely.push('Bass Guitar / Synth Bass');
-  if (bands.mid/max > .35) likely.push('Vocals / Guitars / Synths');
-  if (bands.high/max > .3) likely.push('Hi-hats / Cymbals / Shakers');
-  const energy = total/data.length;
-  const bpmGuess = Math.max(60, Math.round(60 + energy/2));
-  $('#musicAnalysisResult').innerHTML = `
-    <div class="card" style="background:var(--card-2);margin-top:.5rem">
-      <div style="font-weight:700;margin-bottom:.4rem">${escapeHtml(filename)} 分析结果</div>
-      <div class="stat-grid">
-        <div class="stat-box"><div class="num">~${bpmGuess}</div><div class="lbl">估算 BPM</div></div>
-        <div class="stat-box"><div class="num">${energy>80?'高':energy>40?'中':'低'}</div><div class="lbl">整体能量</div></div>
-      </div>
-      <div style="margin:.5rem 0"><b>频段能量比</b></div>
-      <div class="progress-bar" style="margin-bottom:.3rem"><div class="progress-fill" style="width:${bands.bass/max*100}%;background:#ef4444"></div></div><small>低频 (Kick/Bass)</small>
-      <div class="progress-bar" style="margin-bottom:.3rem"><div class="progress-fill" style="width:${bands.lowMid/max*100}%;background:#f59e0b"></div></div><small>中低频</small>
-      <div class="progress-bar" style="margin-bottom:.3rem"><div class="progress-fill" style="width:${bands.mid/max*100}%;background:#22c55e"></div></div><small>中频 (乐器/人声)</small>
-      <div class="progress-bar" style="margin-bottom:.3rem"><div class="progress-fill" style="width:${bands.high/max*100}%;background:#3b82f6"></div></div><small>高频</small>
-      <div style="margin-top:.5rem"><b>可能乐器：</b>${likely.join('、') || '无法确定'}</div>
-      <div class="card-subtitle">以上为前端估算，仅供参考，可结合耳朵进一步修正。</div>
-    </div>`;
-}
-
 // ===== Books =====
 const CHINESE_BOOKS = [
   {title:'红楼梦', author:'曹雪芹', genre:'novel', level:'classic', desc:'中国古典四大名著之首，以贾宝玉与林黛玉的爱情悲剧为主线'},
