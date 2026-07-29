@@ -356,7 +356,7 @@ function loadState(){
     settings: Storage.get('settings', {lastModule:'daily'}),
     forest: Storage.get('forest', {total:0, trees:[]}),
     daily: Storage.get('daily', {tasks:{}, currentDate: todayStr()}),
-    english: Storage.get('english', {lessons:[], currentLessonId:null, currentStep:0, currentSentence:0, difficult:[]}),
+    english: Storage.get('english', {lessons:[], currentLessonId:null, currentStep:0, currentSentence:0, difficult:[], tasks:[]}),
     fitness: Storage.get('fitness', {groups:['默认'], links:[], tasks:[]}),
     collections: Storage.get('collections', {groups:['默认'], links:[]}),
     bills: Storage.get('bills', {expenses:{}, savings:0, savingsHistory:[]}),
@@ -396,7 +396,7 @@ $('#modalOverlay').addEventListener('click', e=>{ if(e.target.id==='modalOverlay
 
 const MODULES = [
   {id:'daily', label:'每日计划', icon:'🌲'},
-  {id:'english', label:'英语学习', icon:'🔁'},
+  {id:'english', label:'外语学习', icon:'🔁'},
   {id:'fitness', label:'健身训练', icon:'💪'},
   {id:'collections', label:'内容收藏', icon:'⭐'},
   {id:'bills', label:'消费记账', icon:'💰'},
@@ -542,6 +542,13 @@ function sourceLabel(src){
   const m = MODULES.find(x=>x.id===src); return m?m.label:src;
 }
 function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function openApp(scheme, fallback){
+  let left = false;
+  const onHide = ()=>{ left = true; };
+  document.addEventListener('visibilitychange', onHide, {once:true});
+  window.location.href = scheme;
+  setTimeout(()=>{ document.removeEventListener('visibilitychange', onHide); if(!left) window.open(fallback, '_blank', 'noopener'); }, 1200);
+}
 
 // ===== Shared Timer component =====
 function flipClockHTML(idSuffix=''){
@@ -651,7 +658,25 @@ renderers.english = function(){
       <div>${state.english.difficult.slice(-20).map(s=>`<div class="list-item"><div class="item-text">${escapeHtml(s.text)}</div></div>`).join('') || '<div class="empty">暂无难句</div>'}</div>
     </div>`;
   }
-  return body;
+  const appCard = `<div class="card">
+    <div class="card-title">📱 打开学习 App</div>
+    <div class="grid-2">
+      <button class="btn accent" id="enOpenEcho" style="width:100%">打开 Echo Loop</button>
+      <button class="btn accent" id="enOpenDuolingo" style="width:100%">打开 多邻国</button>
+    </div>
+    <div class="card-subtitle">未安装 App 将自动跳转官网/下载页。</div>
+  </div>`;
+  const taskCard = `<div class="card">
+    <div class="card-title">每日外语任务</div>
+    <div class="form-row">
+      <input type="date" class="input" id="enTaskDate" value="${todayStr()}">
+      <input type="time" class="input" id="enTaskTime">
+      <input class="input" id="enTaskText" placeholder="学习任务（如：背30个单词）">
+      <button class="btn" id="enAddTask">加入计划</button>
+    </div>
+    <div>${renderTaskTable(state.english.tasks, 'eng')}</div>
+  </div>`;
+  return appCard + taskCard + body;
 };
 function renderLessonList(){
   if (!state.english.lessons.length) return '';
@@ -667,7 +692,17 @@ function renderLessonList(){
   </div>`;
 }
 initModule.english = function(){
-  if (!$('#enCreateLesson')) return;
+  if ($('#enOpenEcho')) $('#enOpenEcho').addEventListener('click', ()=> openApp('echoloop://', 'https://www.echo-loop.top/zh-CN'));
+  if ($('#enOpenDuolingo')) $('#enOpenDuolingo').addEventListener('click', ()=> openApp('duolingo://', 'https://www.duolingo.com'));
+  if ($('#enAddTask')) $('#enAddTask').addEventListener('click', ()=>{
+    const date=$('#enTaskDate').value, time=$('#enTaskTime').value, text=$('#enTaskText').value.trim();
+    if(!text) return; state.english.tasks.push({id:uid(), date, time, text}); addDailyTask(date, text, 'english', time); saveState(); renderContent(); toast('外语任务已添加');
+  });
+  $$('.engDelTask').forEach(b=> b.addEventListener('click', ()=>{
+    const t=state.english.tasks.find(x=>x.id===b.dataset.id); if(t) removeDailyTask(t.date, b.dataset.id);
+    state.english.tasks=state.english.tasks.filter(x=>x.id!==b.dataset.id); saveState(); renderContent();
+  }));
+  if (!$('#enCreateLesson') && !$('#enCloseLesson')) return;
   let audioFile, subText='';
   $('#enAudioFile').addEventListener('change', e=>{ audioFile=e.target.files[0]; });
   $('#enSubFile').addEventListener('change', e=>{
@@ -968,6 +1003,17 @@ function initTimer(idSuffix, onDone){
 
 // ===== Homework =====
 renderers.homework = function(){
+  const hwTasks = [];
+  Object.keys(state.daily.tasks).forEach(d=>{
+    (state.daily.tasks[d]||[]).forEach(t=>{ if(t.source==='homework') hwTasks.push(Object.assign({date:d}, t)); });
+  });
+  hwTasks.sort((a,b)=> (a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
+  const hwListHtml = hwTasks.length ? hwTasks.map(t=>`
+    <div class="list-item ${t.done?'done':''}">
+      <div class="checkbox ${t.done?'checked':''}" data-date="${t.date}" data-id="${t.id}">${t.done?'✓':''}</div>
+      <div class="item-text"><b>${escapeHtml(t.date)} ${t.time||''}</b> ${escapeHtml(t.text)}</div>
+      <button class="btn btn-sm danger hwDelTask" data-date="${t.date}" data-id="${t.id}">删</button>
+    </div>`).join('') : '<div class="empty">暂无作业任务，上传图片识别后生成</div>';
   return `<div class="card">
     <div class="card-title">📝 作业完成</div>
     <div class="form-row">
@@ -984,12 +1030,11 @@ renderers.homework = function(){
         <button class="btn" id="hwAddTasks">生成任务</button>
       </div>
     </div>
+    <div class="card-subtitle">照片仅在识别时预览，生成任务后不再展示；任务与【每日计划】同步。</div>
   </div>
   <div class="card">
-    <div class="card-title">作业记录</div>
-    <div class="grid-2">${state.homework.images.map(img=>`
-      <div class="link-card"><img src="${img.thumb}" style="width:100%;border-radius:6px;margin-bottom:.4rem"><small>${fmtDate(img.date)}</small></div>
-    `).join('') || '<div class="empty" style="grid-column:1/-1">暂无图片</div>'}</div>
+    <div class="card-title">作业任务（与每日计划同步）</div>
+    <div id="hwTaskList">${hwListHtml}</div>
   </div>`;
 };
 initModule.homework = function(){
@@ -1014,9 +1059,20 @@ initModule.homework = function(){
     if(!text) return;
     const lines = text.split(/\n+/).map(s=>s.trim()).filter(Boolean);
     lines.forEach(l=> addDailyTask(date, l, 'homework'));
-    state.homework.images.push({id:uid(), thumb:currentThumb, date:Date.now()});
+    // 照片不再保存/展示，仅保留任务
+    state.homework.images = [];
+    $('#hwPreviewBox').innerHTML = '';
+    $('#hwOcrBox').style.display = 'none';
+    $('#hwOcrText').value = '';
+    if ($('#hwFile')) $('#hwFile').value = '';
     saveState(); renderContent(); toast(`已生成 ${lines.length} 个任务`);
   });
+  $$('#hwTaskList .checkbox').forEach(ch=> ch.addEventListener('click', ()=>{
+    toggleDailyTask(ch.dataset.date, ch.dataset.id); renderContent();
+  }));
+  $$('.hwDelTask').forEach(b=> b.addEventListener('click', ()=>{
+    removeDailyTask(b.dataset.date, b.dataset.id); renderContent();
+  }));
 };
 function makeThumb(file, max=600){
   return new Promise((res)=>{
