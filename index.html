@@ -1801,28 +1801,6 @@ function recommendBooks(prefs){
   const seed = genres.join('').length * 7 + 42;
   return candidates.sort((a,b) => (a.title.charCodeAt(0) * seed) % 3 - (b.title.charCodeAt(0) * seed) % 3).slice(0,8);
 }
-async function searchBooks(query){
-  if (!query || query.trim().length < 2) return null;
-  query = query.trim();
-  // Try Open Library for Chinese books
-  try {
-    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&language=chi&limit=8&fields=title,author_name,edition_count,first_publish_year,key`);
-    if (!res.ok) throw new Error('fetch fail');
-    const data = await res.json();
-    if (data.docs && data.docs.length > 0) {
-      return data.docs.map(d => ({
-        title: d.title || query,
-        author: (d.author_name && d.author_name[0]) || '未知',
-        year: d.first_publish_year || '',
-        olKey: d.key,
-        url: d.key ? `https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(d.title)}` : ''
-      })).slice(0,6);
-    }
-  } catch(e) { /* fallback to currated */ }
-  // Fallback: search Chinese book list
-  const q = query.toLowerCase();
-  return CHINESE_BOOKS.filter(b => b.title.includes(query) || b.author.includes(query) || b.genre.includes(query)).slice(0,6);
-}
 renderers.books = function(){
   const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
   if (!isMobile) return `<div class="card"><div class="card-title">📚 书香书屋</div><div class="empty">此模块仅在手机浏览器展示，请用手机访问。</div></div>`;
@@ -1855,12 +1833,13 @@ renderers.books = function(){
       <button class="btn btn-sm secondary" id="bookResetPrefs">重选偏好</button>
     </div>
     <div class="card-subtitle">根据你的偏好（${(prefs.genres||[]).map(g=>BOOK_GENRES.find(x=>x.id===g)?.label).filter(Boolean).join('、')} · ${BOOK_LEVELS.find(l=>l.id===prefs.level)?.label||''}），为你推荐：</div>
-    <div id="bookRecList"><div class="empty">🔎 正在为你预查可下载的 epub 版本...</div></div>
+    <div id="bookRecList"><div class="empty">🔎 正在为你准备 Z-Library 下载入口...</div></div>
   </div>
   <div class="card">
-    <div class="card-title"><span class="ttl">🔍 搜索图书</span></div>
+    <div class="card-title"><span class="ttl">🔍 搜索图书（Z-Library）</span></div>
+    <div class="card-subtitle">在 Z-Library 中按书名或作者搜索</div>
     <div class="form-row">
-      <input class="input" id="bookSearchInput" placeholder="输入书名、作者或关键词">
+      <input class="input" id="bookSearchInput" placeholder="在 Z-Library 搜索书名 / 作者">
       <button class="btn" id="bookSearchBtn">搜索</button>
     </div>
     <div id="bookSearchResult"></div>
@@ -1869,7 +1848,7 @@ renderers.books = function(){
   <div class="card">
     <div class="card-title">📖 打开 iBooks</div>
     <a href="ibooks://" class="btn btn-block" style="margin-bottom:.3rem">打开 iPhone 图书 App</a>
-    <div class="card-subtitle">搜索的书籍可在 iBooks 中免费下载 epub 版本。</div>
+    <div class="card-subtitle">从 Z-Library 下载的 epub 可在 iBooks 中打开阅读。</div>
   </div>
   <div class="card">
     <div class="card-title">⏱️ 阅读计划 & 计时器</div>
@@ -1935,18 +1914,12 @@ initModule.books = async function(){
     }
   }
 
-  // === Search ===
-  if ($('#bookSearchBtn')) $('#bookSearchBtn').addEventListener('click', async ()=>{
+  // === Search (source: Z-Library) ===
+  if ($('#bookSearchBtn')) $('#bookSearchBtn').addEventListener('click', ()=>{
     const q = $('#bookSearchInput').value.trim();
     if (!q) { toast('请输入搜索关键词'); return; }
-    const resultDiv = $('#bookSearchResult');
-    resultDiv.innerHTML = '<div class="empty">🔍 正在搜索...</div>';
-    const results = await searchBooks(q);
-    if (!results || results.length === 0) {
-      resultDiv.innerHTML = '<div class="empty">未找到相关书籍，试试其他关键词</div>';
-      return;
-    }
-    await renderBookList(resultDiv, results);
+    window.open(zlibSearchUrl(q), '_blank', 'noopener');
+    toast('已在 Z-Library 中搜索：' + q);
   });
   if ($('#bookSearchInput')) $('#bookSearchInput').addEventListener('keydown', e=>{
     if (e.key === 'Enter') $('#bookSearchBtn').click();
@@ -1965,8 +1938,8 @@ initModule.books = async function(){
 };
 async function renderBookList(container, books){
   if (!books || !books.length) { container.innerHTML = '<div class="empty">暂无推荐，试试其他偏好</div>'; return; }
-  // 先为每本书批量预查 epub 下载直链，再统一展示推荐
-  container.innerHTML = '<div class="empty">🔎 正在为每本书预查 epub 下载链接...</div>';
+  // 先为每本书批量准备 Z-Library 下载入口，再统一展示推荐
+  container.innerHTML = '<div class="empty">🔎 正在为每本书准备 Z-Library 下载入口...</div>';
   await Promise.all(books.map(async b => {
     b.dlUrl = await fetchBookDownload(b.title, b.author || '');
   }));
@@ -1974,11 +1947,11 @@ async function renderBookList(container, books){
   const direct = books.filter(b => b.dlUrl).length;
   container.innerHTML = books.map(b => {
     const btn = b.dlUrl
-      ? `<a class="btn btn-sm success" href="${escapeHtml(b.dlUrl)}" target="_blank" rel="noopener">⬇️ 下载 epub</a>`
-      : `<button class="btn btn-sm secondary bookSearchBtn" data-title="${escapeHtml(b.title)}">📖 搜索其他版本</button>`;
+      ? `<a class="btn btn-sm success" href="${escapeHtml(b.dlUrl)}" target="_blank" rel="noopener">📚 Z-Library 下载</a>`
+      : `<button class="btn btn-sm secondary bookSearchBtn" data-title="${escapeHtml(b.title)}">📚 在 Z-Library 搜索</button>`;
     const meta = b.desc
       ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">💡 ${escapeHtml(b.desc)}</div>`
-      : (b.olKey ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">来自 Open Library</div>` : `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">中文推荐</div>`);
+      : `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">中文推荐</div>`;
     return `
     <div class="book-item">
       <div style="flex:1">
@@ -1989,47 +1962,26 @@ async function renderBookList(container, books){
       <div>${btn}</div>
     </div>`;
   }).join('')
-  + (direct < books.length ? `<div class="card-subtitle" style="margin-top:.5rem">已为 ${direct}/${books.length} 本书找到可直接下载的 epub，其余可点「搜索其他版本」查找。</div>` : '');
+  + (direct < books.length ? `<div class="card-subtitle" style="margin-top:.5rem">已为 ${direct}/${books.length} 本书准备好 Z-Library 下载入口，其余可点「在 Z-Library 搜索」查找。</div>` : '');
   $$('.bookSearchBtn', container).forEach(btn => {
-    btn.addEventListener('click', () => window.open(`https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(btn.dataset.title)}`, '_blank', 'noopener'));
+    btn.addEventListener('click', () => window.open(zlibSearchUrl(btn.dataset.title), '_blank', 'noopener'));
   });
 }
-function dlKey(title, author){
-  return `dl_${title}_${author||''}`.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_').slice(0,80);
+// ===== 图书来源：Z-Library =====
+// 纯前端无法跨域抓取 Z-Library（CORS + 反爬/登录限制），所以“下载/查找”直接打开
+// Z-Library 的搜索页，由用户在其站内挑选版本并下载。
+// 若你常用的镜像域名不同，只需修改下面这一行常量即可。
+const ZLIB_BASE = 'https://zh.b-ok.cc';
+function zlibSearchUrl(title){
+  return ZLIB_BASE + '/s/' + encodeURIComponent((title||'').trim());
 }
 async function fetchBookDownload(title, author){
-  const key = dlKey(title, author);
+  const key = 'zl_' + (title||'') + '|' + (author||'');
   const cache = state.books.downloadCache = state.books.downloadCache || {};
-  // Check cache first
   if (cache[key]) return cache[key];
-  let url = null;
-  // Search Gutendex
-  try {
-    const res = await fetch(`https://gutendex.com/books/?search=${encodeURIComponent(title)}`);
-    if (!res.ok) throw new Error('fail');
-    const data = await res.json();
-    const results = data.results || [];
-    // Try exact title match
-    const t = title.toLowerCase().slice(0,12);
-    let match = results.find(b => b.title.toLowerCase().includes(t));
-    if (!match && author) {
-      const a = author.split(/[\s·,，、]/).filter(Boolean)[0];
-      if (a) match = results.find(b => b.title.toLowerCase().includes(a.toLowerCase()));
-    }
-    if (!match && results.length) match = results[0];
-    if (match) url = `https://www.gutenberg.org/ebooks/${match.id}.epub.images`;
-  } catch(e) { /* fallback */ }
-  // Try Open Library
-  try {
-    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(title)}&limit=3&fields=title,author_name,ia`);
-    if (!res.ok) throw new Error('fail');
-    const data = await res.json();
-    if (data.docs && data.docs.length) {
-      const d = data.docs[0];
-      if (d.ia && d.ia.length) url = `https://archive.org/details/${d.ia[0]}`;
-    }
-  } catch(e) { /* fallback */ }
-  if (url) { cache[key] = url; saveState(); }
+  const url = zlibSearchUrl(title);
+  cache[key] = url;
+  saveState();
   return url;
 }
 
