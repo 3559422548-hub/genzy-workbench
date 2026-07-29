@@ -277,24 +277,125 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
 .pill.danger { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
 .pill.success { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); }
 
-/* ===== Flip clock ===== */
+/* ===== Flip clock (split-flap design) ===== */
 .flip-clock {
-  display:flex; gap:.5rem; justify-content:center; align-items:center; flex-wrap:wrap;
-  background: #000; border-radius: var(--radius); padding: 1rem;
-  color: #fff; margin: .5rem 0;
+  background: #000;
+  border-radius: 22px;
+  padding: .9rem 1rem;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  color: #fff;
+  margin: .5rem 0;
+  position: relative;
+  min-height: 130px;
 }
-.flip-group { display:flex; gap:.25rem; }
+.flip-clock-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+}
+.flip-clock-seconds {
+  position: absolute;
+  bottom: .5rem;
+  right: .6rem;
+  display: flex;
+  gap: .1rem;
+}
+.flip-pair { display: flex; gap: .15rem; }
 .flip-digit {
-  width: 56px; height: 78px; background: #1c1c1e; border-radius: 12px;
-  display:grid; place-items:center; font-family: var(--body); font-size: 2.2rem; font-weight: 700;
-  position:relative; overflow:hidden;
-  font-feature-settings: "tnum" 1;
+  position: relative;
+  width: 64px;
+  height: 95px;
+  background: #1c1c1e;
+  border-radius: 12px;
+  overflow: hidden;
+  perspective: 600px;
+  font-family: var(--body);
+  font-size: 72px;
+  font-weight: 700;
+  color: #aaaebc;
+  line-height: 95px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
-.flip-sep { font-size: 1.6rem; align-self:center; font-weight: 300; opacity: .7; }
-.flip-label { width:100%; text-align:center; font-size: .65rem; margin-top:.35rem; color:#aaa; letter-spacing: 1px; font-weight: 600; }
-@media (min-width: 769px) {
-  .flip-digit { width: 80px; height: 110px; font-size: 3.2rem; }
-  .flip-sep { font-size: 2.4rem; }
+.flip-digit::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 1px;
+  margin-top: -.5px;
+  background: rgba(0,0,0,.6);
+  z-index: 3;
+  pointer-events: none;
+}
+.flip-digit-small {
+  width: 28px;
+  height: 40px;
+  font-size: 28px;
+  line-height: 40px;
+  border-radius: 7px;
+}
+.flip-digit-small::before { height: 1px; }
+.flip-half {
+  position: absolute;
+  left: 0; right: 0;
+  height: 50%;
+  overflow: hidden;
+  background: #1c1c1e;
+}
+.flip-half .digit-text {
+  position: absolute;
+  left: 0; right: 0;
+  height: 95px;
+  line-height: 95px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+.flip-digit-small .flip-half .digit-text {
+  height: 40px;
+  line-height: 40px;
+}
+.flip-top { top: 0; }
+.flip-top .digit-text { top: 0; }
+.flip-bottom { bottom: 0; }
+.flip-bottom .digit-text { bottom: 0; }
+.flip-flap {
+  position: absolute;
+  left: 0; right: 0;
+  top: 0; height: 50%;
+  background: #1c1c1e;
+  overflow: hidden;
+  transform-origin: bottom center;
+  z-index: 2;
+  backface-visibility: hidden;
+  transform: rotateX(0deg);
+}
+.flip-flap .digit-text {
+  position: absolute;
+  top: 0;
+  left: 0; right: 0;
+  height: 95px;
+  line-height: 95px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+.flip-digit-small .flip-flap .digit-text {
+  height: 40px;
+  line-height: 40px;
+}
+.flip-flap.flipping { animation: flipTop .55s ease-in forwards; }
+@keyframes flipTop {
+  0% { transform: rotateX(0deg); }
+  100% { transform: rotateX(-180deg); }
 }
 
 /* ===== Forest (Daily Plan trees) ===== */
@@ -936,22 +1037,58 @@ function openApp(scheme, fallback){
 
 // ===== Shared Timer component =====
 function flipClockHTML(idSuffix=''){
-  return `<div class="flip-clock" id="flipClock${idSuffix}">
-    <div><div class="flip-group" id="fgH${idSuffix}"><div class="flip-digit">0</div><div class="flip-digit">0</div></div><div class="flip-label">HOURS</div></div>
-    <div class="flip-sep">:</div>
-    <div><div class="flip-group" id="fgM${idSuffix}"><div class="flip-digit">0</div><div class="flip-digit">0</div></div><div class="flip-label">MINUTES</div></div>
-    <div class="flip-sep">:</div>
-    <div><div class="flip-group" id="fgS${idSuffix}"><div class="flip-digit">0</div><div class="flip-digit">0</div></div><div class="flip-label">SECONDS</div></div>
-  </div>`;
+  const mk = (val, small) => `<div class="flip-digit${small?' flip-digit-small':''}" data-value="${val}">` +
+    `<div class="flip-half flip-top"><span class="digit-text">${val}</span></div>` +
+    `<div class="flip-half flip-bottom"><span class="digit-text">${val}</span></div>` +
+    `<div class="flip-flap"><span class="digit-text">${val}</span></div>` +
+    `</div>`;
+  return `<div class="flip-clock" id="flipClock${idSuffix}">` +
+    `<div class="flip-clock-main">` +
+      `<div class="flip-pair" id="fgH${idSuffix}">${mk(0)}${mk(0)}</div>` +
+      `<div class="flip-pair" id="fgM${idSuffix}">${mk(0)}${mk(0)}</div>` +
+    `</div>` +
+    `<div class="flip-clock-seconds">` +
+      `<div class="flip-pair" id="fgS${idSuffix}">${mk(0,true)}${mk(0,true)}</div>` +
+    `</div>` +
+  `</div>`;
+}
+function flipUpdateDigit(digitEl, newValue){
+  const oldValue = digitEl.dataset.value || '';
+  const newStr = String(newValue);
+  if (oldValue === newStr) return;
+  const top = digitEl.querySelector('.flip-top .digit-text');
+  const bottom = digitEl.querySelector('.flip-bottom .digit-text');
+  const flapEl = digitEl.querySelector('.flip-flap');
+  const flap = flapEl ? flapEl.querySelector('.digit-text') : null;
+  if (!oldValue) {
+    top.textContent = newStr; bottom.textContent = newStr;
+    if (flap) flap.textContent = newStr;
+    digitEl.dataset.value = newStr;
+    return;
+  }
+  if (flap) flap.textContent = oldValue;
+  top.textContent = newStr;
+  bottom.textContent = newStr;
+  if (flapEl) {
+    flapEl.classList.remove('flipping');
+    void flapEl.offsetWidth;
+    flapEl.classList.add('flipping');
+  }
+  digitEl.dataset.value = newStr;
+}
+function flipUpdateGroup(groupId, d1, d2){
+  const digits = document.querySelectorAll('#' + groupId + ' .flip-digit');
+  if (digits.length >= 2) {
+    flipUpdateDigit(digits[0], d1);
+    flipUpdateDigit(digits[1], d2);
+  }
 }
 function setFlipClock(idSuffix, totalSeconds){
   totalSeconds = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(totalSeconds/3600), m = Math.floor((totalSeconds%3600)/60), s = totalSeconds%60;
-  const set = (prefix, val)=>{
-    const els = $$(`#${prefix}${idSuffix} .flip-digit`);
-    if (els.length) { els[0].textContent = String(Math.floor(val/10)); els[1].textContent = String(val%10); }
-  };
-  set('fgH', h); set('fgM', m); set('fgS', s);
+  flipUpdateGroup('fgH' + idSuffix, Math.floor(h/10), h%10);
+  flipUpdateGroup('fgM' + idSuffix, Math.floor(m/10), m%10);
+  flipUpdateGroup('fgS' + idSuffix, Math.floor(s/10), s%10);
 }
 const TIMER_INTERVALS = {};
 function startTick(key, updater){
