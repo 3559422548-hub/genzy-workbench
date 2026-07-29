@@ -301,10 +301,11 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
 }
 .flip-clock-seconds {
   position: absolute;
-  bottom: .5rem;
-  right: .6rem;
+  bottom: .55rem;
+  right: .7rem;
   display: flex;
-  gap: .1rem;
+  gap: .08rem;
+  z-index: 4;
 }
 .flip-pair { display: flex; gap: .15rem; }
 .flip-digit {
@@ -336,11 +337,11 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
   pointer-events: none;
 }
 .flip-digit-small {
-  width: 28px;
-  height: 40px;
-  font-size: 28px;
-  line-height: 40px;
-  border-radius: 7px;
+  width: 18px;
+  height: 26px;
+  font-size: 18px;
+  line-height: 26px;
+  border-radius: 4px;
 }
 .flip-digit-small::before { height: 1px; }
 .flip-half {
@@ -360,8 +361,8 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
   font-feature-settings: 'tnum' 1;
 }
 .flip-digit-small .flip-half .digit-text {
-  height: 40px;
-  line-height: 40px;
+  height: 26px;
+  line-height: 26px;
 }
 .flip-top { top: 0; }
 .flip-top .digit-text { top: 0; }
@@ -389,8 +390,8 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
   font-feature-settings: 'tnum' 1;
 }
 .flip-digit-small .flip-flap .digit-text {
-  height: 40px;
-  line-height: 40px;
+  height: 26px;
+  line-height: 26px;
 }
 .flip-flap.flipping { animation: flipTop .55s ease-in forwards; }
 @keyframes flipTop {
@@ -488,14 +489,104 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
 .grid-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap:.8rem; }
 @media (max-width: 480px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
 
-/* ===== Link cards ===== */
-.link-card {
-  background: var(--card-2); border-radius: var(--radius-sm);
-  padding: .85rem; display:flex; flex-direction:column; gap:.35rem;
-  cursor: pointer; transition: background .12s, transform .08s;
+/* ===== Link cards (masonry-style) ===== */
+.links-masonry {
+  column-count: 2;
+  column-gap: .5rem;
 }
-.link-card:active { transform: scale(.97); background: color-mix(in srgb, var(--card-2) 85%, var(--text)); }
-.link-card .card-name { font-weight: 600; color: var(--accent); font-size: .9rem; }
+.link-card {
+  background: #1c1c1e;
+  border-radius: 18px;
+  padding: .9rem 1rem;
+  margin-bottom: .5rem;
+  break-inside: avoid;
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  cursor: pointer;
+  transition: transform .08s, background .12s;
+  position: relative;
+  color: #fff;
+  min-height: 100px;
+}
+.link-card:active { transform: scale(.97); background: #2c2c2e; }
+.link-card .card-tag {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .72rem;
+  color: #aaaebc;
+}
+.link-card .card-tag .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8e8e93;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.link-card .card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  word-break: break-word;
+  line-height: 1.25;
+  flex: 1;
+}
+.link-card .card-url {
+  font-size: .68rem;
+  color: #888;
+  word-break: break-all;
+  line-height: 1.4;
+  max-height: 2.8em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.link-card .card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: .3rem;
+}
+.link-card .card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: .7rem;
+  color: #aaaebc;
+}
+.link-card .card-badge .n-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #8e8e93;
+  color: #1c1c1e;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .58rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.link-card .card-del {
+  background: none;
+  border: none;
+  color: #ff453a;
+  font-size: .78rem;
+  cursor: pointer;
+  padding: .15rem .4rem;
+  opacity: .7;
+}
+.link-card .card-del:hover { opacity: 1; text-decoration: underline; }
+.link-card.size-s { min-height: 95px; }
+.link-card.size-m { min-height: 130px; }
+.link-card.size-l { min-height: 170px; }
+.link-card.size-s .card-title { font-size: 1rem; }
+.link-card.size-l .card-title { font-size: 1.3rem; }
+.link-card.size-l .card-url { font-size: .72rem; }
 
 /* ===== Audio ===== */
 .audio-box { width:100%; border-radius: var(--radius-sm); margin: .5rem 0; }
@@ -1411,18 +1502,26 @@ function renderLinkCards(links, prefix){
   if (!links.length) return '<div class="empty">暂无收藏链接</div>';
   const groups = {};
   links.forEach(l=>{ groups[l.group||'默认'] = groups[l.group||'默认']||[]; groups[l.group||'默认'].push(l); });
-  return Object.keys(groups).map(g=>`
-    <div style="margin:.6rem 0"><div class="pill">${escapeHtml(g)}</div>
-    <div class="grid-2" style="margin-top:.4rem">
-      ${groups[g].map(l=>`
-        <div class="link-card" data-url="${escapeHtml(l.url)}" onclick="window.open(this.dataset.url,'_blank','noopener');">
-          <div class="card-name">${escapeHtml(l.name)}</div>
-          <div style="font-size:.75rem;color:var(--muted);word-break:break-all;margin-bottom:.2rem">${escapeHtml(l.url)}</div>
-          <div><button class="btn btn-sm danger ${prefix}DelLink" data-id="${l.id}" onclick="event.stopPropagation();">删除</button></div>
-        </div>
-      `).join('')}
-    </div></div>
-  `).join('');
+  const sizeHash = s => { let h=0; for (let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return Math.abs(h); };
+  const sizes = ['s','m','l'];
+  return Object.keys(groups).map(g=>{
+    const grp = groups[g];
+    return '<div style="margin:.6rem 0"><div class="pill">' + escapeHtml(g) + '</div>' +
+    '<div class="links-masonry" style="margin-top:.4rem">' +
+      grp.map(l=>{
+        const sz = sizes[sizeHash(l.name + l.url) % 3];
+        return '<div class="link-card size-' + sz + '" data-url="' + escapeHtml(l.url) + '" onclick="window.open(this.dataset.url,\'_blank\',\'noopener\');">' +
+          '<div class="card-tag"><span class="dot"></span><span>' + escapeHtml(g) + '</span></div>' +
+          '<div class="card-title">' + escapeHtml(l.name) + '</div>' +
+          '<div class="card-url">' + escapeHtml(l.url) + '</div>' +
+          '<div class="card-meta">' +
+            '<span class="card-badge"><span class="n-icon">N</span>新卡</span>' +
+            '<button class="card-del ' + prefix + 'DelLink" data-id="' + l.id + '" onclick="event.stopPropagation();">删除</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div></div>';
+  }).join('');
 }
 function bindLinkCardActions(prefix){
   const storeKey = prefix==='fit'?'fitness':'collections';
