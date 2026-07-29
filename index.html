@@ -1143,7 +1143,7 @@ initModule.english = function(){
 
   // App launcher
   const echoCard = $('#enOpenEcho');
-  if (echoCard) echoCard.addEventListener('click', ()=> openApp('echoloop://', 'https://www.echo-loop.top/zh-CN'));
+  if (echoCard) echoCard.addEventListener('click', ()=> openApp('shortcuts://run-shortcut?name=Echo%20Loop', 'https://www.echo-loop.top/zh-CN'));
   const duoCard = $('#enOpenDuolingo');
   if (duoCard) duoCard.addEventListener('click', ()=> openApp('duolingo://', 'https://www.duolingo.com'));
 
@@ -1596,251 +1596,40 @@ const STYLE_GUIDES = {
   'lo-fi hip-hop':'Lo-fi Hip-hop：简单和弦 loop、爵士采样、鼓组 swing、 vinyl crackle/雨声营造氛围。'
 };
 // ===== Books =====
-const CHINESE_BOOKS = [
-  {title:'红楼梦', author:'曹雪芹', genre:'novel', level:'classic', desc:'中国古典四大名著之首，以贾宝玉与林黛玉的爱情悲剧为主线'},
-  {title:'西游记', author:'吴承恩', genre:'novel', level:'classic', desc:'中国古典四大名著，唐僧师徒西天取经的奇幻之旅'},
-  {title:'活着', author:'余华', genre:'novel', level:'medium', desc:'讲述大时代背景下小人物的命运与生存韧性'},
-  {title:'三体', author:'刘慈欣', genre:'sci-fi', level:'medium', desc:'中国科幻里程碑，讲述地球文明与三体文明的首次接触'},
-  {title:'百年孤独', author:'加西亚·马尔克斯', genre:'novel', level:'deep', desc:'魔幻现实主义经典，中文版已深入影响中国文学'},
-  {title:'小王子', author:'圣埃克苏佩里', genre:'novel', level:'light', desc:'写给成年人的童话，中文译本广为流传'},
-  {title:'老人与海', author:'海明威', genre:'novel', level:'medium', desc:'硬汉文学的巅峰之作，中文版深入影响几代人'},
-  {title:'苏东坡传', author:'林语堂', genre:'biography', level:'medium', desc:'一代文豪苏轼的生平与精神世界'},
-  {title:'明朝那些事儿', author:'当年明月', genre:'history', level:'light', desc:'以幽默风趣的笔调讲述明朝三百年历史'},
-  {title:'围城', author:'钱钟书', genre:'novel', level:'medium', desc:'中国现代文学经典，对婚姻与人生的深刻洞察'},
-  {title:'平凡的世界', author:'路遥', genre:'novel', level:'medium', desc:'茅盾文学奖作品，展现普通人在大时代中的奋斗'},
-  {title:'挪威的森林', author:'村上春树', genre:'novel', level:'medium', desc:'日本当代文学经典，中文译本影响广泛'},
-  {title:'人类简史', author:'尤瓦尔·赫拉利', genre:'history', level:'medium', desc:'从认知革命到人工智能的人类宏大历史叙事'},
-  {title:'送你一颗子弹', author:'刘瑜', genre:'essay', level:'light', desc:'当代学者的生活随笔与社会观察'},
-  {title:'时间简史', author:'史蒂芬·霍金', genre:'science', level:'deep', desc:'探索宇宙奥秘的科普经典'},
-  {title:'边城', author:'沈从文', genre:'novel', level:'light', desc:'湘西小镇的纯美爱情故事，中国乡土文学经典'},
-  {title:'骆驼祥子', author:'老舍', genre:'novel', level:'medium', desc:'老北京底层人民的真实写照'},
-  {title:'白夜行', author:'东野圭吾', genre:'mystery', level:'medium', desc:'日本悬疑推理经典，中文版畅销不衰'},
-  {title:'1984', author:'乔治·奥威尔', genre:'novel', level:'deep', desc:'反乌托邦经典，中文译本影响深远'},
-  {title:'局外人', author:'加缪', genre:'philosophy', level:'deep', desc:'存在主义文学代表作，中文译本广受推崇'},
-  {title:'飘', author:'玛格丽特·米切尔', genre:'novel', level:'medium', desc:'美国南北战争背景的爱情史诗'},
-  {title:'哈利·波特与魔法石', author:'J.K.罗琳', genre:'fantasy', level:'light', desc:'全球最畅销的奇幻文学系列'},
-  {title:'牧羊少年奇幻之旅', author:'保罗·科埃略', genre:'novel', level:'light', desc:'关于梦想与追寻的人生寓言'},
-  {title:'银河帝国：基地', author:'艾萨克·阿西莫夫', genre:'sci-fi', level:'medium', desc:'科幻文学史上最经典系列之一'},
-  {title:'活着之上', author:'阎真', genre:'novel', level:'medium', desc:'当代知识分子的生存困境与精神追求'},
-  {title:'杀死一只知更鸟', author:'哈珀·李', genre:'novel', level:'medium', desc:'关于正义与成长的不朽经典'},
-  {title:'追风筝的人', author:'卡勒德·胡赛尼', genre:'novel', level:'medium', desc:'关于友谊、背叛与救赎的感人故事'},
-  {title:'禅与摩托车维修艺术', author:'罗伯特·波西格', genre:'philosophy', level:'deep', desc:'关于生活哲学与自我探索的经典之作'},
-  {title:'黑客与画家', author:'保罗·格雷厄姆', genre:'essay', level:'medium', desc:'硅谷创业思维的启蒙读物'},
-  {title:'费马大定理', author:'西蒙·辛格', genre:'science', level:'medium', desc:'数学史上最迷人的传奇故事'}
-];
-const BOOK_GENRES = [
-  {id:'novel', label:'📖 小说'},
-  {id:'sci-fi', label:'🚀 科幻'},
-  {id:'history', label:'📜 历史'},
-  {id:'philosophy', label:'💭 哲学'},
-  {id:'mystery', label:'🔍 悬疑'},
-  {id:'fantasy', label:'🦄 奇幻'},
-  {id:'biography', label:'👤 传记'},
-  {id:'essay', label:'✍️ 散文'},
-  {id:'science', label:'🔬 科普'}
-];
-const BOOK_LEVELS = [
-  {id:'light', label:'🌱 轻松入门', desc:'短小精悍，适合碎片时间'},
-  {id:'medium', label:'📚 中等厚度', desc:'篇幅适中，沉浸阅读'},
-  {id:'deep', label:'🎯 经典深度', desc:'大部头/有挑战，值得品味'}
-];
-function recommendBooks(prefs){
-  if (!prefs || !prefs.genres || !prefs.genres.length) return CHINESE_BOOKS.slice(0,6);
-  const genres = prefs.genres;
-  let candidates = CHINESE_BOOKS.filter(b => {
-    if (!genres.includes(b.genre)) return false;
-    if (prefs.level && prefs.level !== 'all' && b.level !== prefs.level) return false;
-    return true;
-  });
-  if (candidates.length < 4) candidates = CHINESE_BOOKS.filter(b => genres.includes(b.genre));
-  if (candidates.length < 4) candidates = CHINESE_BOOKS;
-  const seed = genres.join('').length * 7 + 42;
-  return candidates.sort((a,b) => (a.title.charCodeAt(0) * seed) % 3 - (b.title.charCodeAt(0) * seed) % 3).slice(0,8);
-}
 renderers.books = function(){
   const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
-  if (!isMobile) return `<div class="card"><div class="card-title">📚 书香书屋</div><div class="empty">此模块仅在手机浏览器展示，请用手机访问。</div></div>`;
-  const prefs = state.books.prefs || {};
-  const hasPrefs = prefs.genres && prefs.genres.length > 0;
-  // Quiz HTML
-  const quizHtml = hasPrefs ? '' : `
-  <div class="card">
-    <div class="card-title"><span class="ttl">📝 读书偏好问卷</span></div>
-    <div class="card-subtitle">回答几个问题，帮你推荐更适合的书籍</div>
-    <div class="form-group">
-      <label>你喜欢的书籍类型？（可多选）</label>
-      <div class="segment" id="bookGenreSeg" style="flex-wrap:wrap">
-        ${BOOK_GENRES.map(g=>`<button data-val="${g.id}">${g.label}</button>`).join('')}
-      </div>
-    </div>
-    <div class="form-group">
-      <label>推荐的阅读深度？</label>
-      <div class="segment" id="bookLevelSeg" style="flex-wrap:wrap">
-        ${BOOK_LEVELS.map(l=>`<button data-val="${l.id}">${l.label}</button>`).join('')}
-      </div>
-    </div>
-    <button class="btn btn-block" id="bookSavePrefs">保存偏好，开始推荐</button>
-  </div>`;
-  // Recommendation or result
-  const recHtml = hasPrefs ? `
-  <div class="card">
-    <div class="card-title">
-      <span class="ttl">📚 推荐书目</span>
-      <button class="btn btn-sm secondary" id="bookResetPrefs">重选偏好</button>
-    </div>
-    <div class="card-subtitle">根据你的偏好（${(prefs.genres||[]).map(g=>BOOK_GENRES.find(x=>x.id===g)?.label).filter(Boolean).join('、')} · ${BOOK_LEVELS.find(l=>l.id===prefs.level)?.label||''}），为你推荐：</div>
-    <div id="bookRecList"><div class="empty">🔎 正在为你准备 Z-Library 下载入口...</div></div>
-  </div>
-  <div class="card">
-    <div class="card-title"><span class="ttl">🔍 搜索图书（Z-Library）</span></div>
-    <div class="card-subtitle">在 Z-Library 中按书名或作者搜索</div>
-    <div class="form-row">
-      <input class="input" id="bookSearchInput" placeholder="在 Z-Library 搜索书名 / 作者">
-      <button class="btn" id="bookSearchBtn">搜索</button>
-    </div>
-    <div id="bookSearchResult"></div>
-  </div>` : '';
-  return `${quizHtml}${recHtml}
-  <div class="card">
-    <div class="card-title">📖 打开 iBooks</div>
-    <a href="ibooks://" class="btn btn-block" style="margin-bottom:.3rem">打开 iPhone 图书 App</a>
-    <div class="card-subtitle">从 Z-Library 下载的 epub 可在 iBooks 中打开阅读。</div>
-  </div>
-  <div class="card">
-    <div class="card-title">⏱️ 阅读计划 & 计时器</div>
-    <div class="form-row">
-      <input type="date" class="input" id="bookDate" value="${todayStr()}">
-      <input type="time" class="input" id="bookTime">
-      <input class="input" id="bookTask" placeholder="阅读页数/章节">
-      <button class="btn" id="bookAddTask">加入计划</button>
-    </div>
-    <div style="margin-bottom:.7rem">${renderTaskTable(state.books.tasks, 'book')}</div>
-    ${renderTimerUI('book')}
-  </div>`;
+  if (!isMobile) return '<div class="card"><div class="card-title">📚 书香书屋</div><div class="empty">此模块仅在手机浏览器展示，请用手机访问。</div></div>';
+  return '<div class="card">' +
+    '<div class="card-title">📖 打开 iBooks</div>' +
+    '<a href="ibooks://" class="btn btn-block" style="margin-bottom:.3rem">打开 iPhone 图书 App</a>' +
+    '<div class="card-subtitle">从 Z-Library 下载的 epub 可在 iBooks 中打开阅读。</div>' +
+  '</div>' +
+  '<div class="card">' +
+    '<div class="card-title">⏱️ 阅读计划 & 计时器</div>' +
+    '<div class="form-row">' +
+      '<input type="date" class="input" id="bookDate" value="' + todayStr() + '">' +
+      '<input type="time" class="input" id="bookTime">' +
+      '<input class="input" id="bookTask" placeholder="阅读页数/章节">' +
+      '<button class="btn" id="bookAddTask">加入计划</button>' +
+    '</div>' +
+    '<div style="margin-bottom:.7rem">' + renderTaskTable(state.books.tasks, 'book') + '</div>' +
+    renderTimerUI('book') +
+  '</div>';
 };
-initModule.books = async function(){
-  const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
-  if (!isMobile) return;
-  const prefs = state.books.prefs || {};
-
-  // === Preference Quiz ===
-  const saveQuiz = () => {
-    const seg = $('#bookGenreSeg');
-    const levelSeg = $('#bookLevelSeg');
-    if (!seg) return;
-    const selected = seg.querySelectorAll('.active');
-    const selectedLevel = levelSeg ? levelSeg.querySelector('.active') : null;
-    if (!selected || selected.length === 0) { toast('请至少选择一种书籍类型'); return; }
-    state.books.prefs = {
-      genres: Array.from(selected).map(b => b.dataset.val),
-      level: selectedLevel ? selectedLevel.dataset.val : 'medium',
-      setAt: Date.now()
-    };
-    if (state.books.prefsList) delete state.books.prefsList;
-    saveState(); renderContent(); toast('偏好已保存');
-  };
-  if ($('#bookSavePrefs')) $('#bookSavePrefs').addEventListener('click', saveQuiz);
-  // Genre segment — multi-select (toggle)
-  $$('#bookGenreSeg button').forEach(b => b.addEventListener('click', ()=>{
-    b.classList.toggle('active');
-  }));
-  // Level segment — single select
-  $$('#bookLevelSeg button').forEach(b => b.addEventListener('click', ()=>{
-    $$('#bookLevelSeg button').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-  }));
-  // Reset prefs
-  if ($('#bookResetPrefs')) $('#bookResetPrefs').addEventListener('click', ()=>{
-    delete state.books.prefs; saveState(); renderContent();
-  });
-
-  // === Recommendations ===
-  if (prefs.genres && prefs.genres.length) {
-    const recList = $('#bookRecList');
-    if (recList) {
-      // Use cached prefsList or compute
-      if (state.books.prefsList && state.books.prefsList.genres && state.books.prefsList.genres.join() === prefs.genres.join() && state.books.prefsList.level === prefs.level) {
-        await renderBookList(recList, state.books.prefsList.books);
-      } else {
-        const books = recommendBooks(prefs);
-        state.books.prefsList = { genres: prefs.genres, level: prefs.level, books, at: Date.now() };
-        saveState();
-        await renderBookList(recList, books);
-      }
-    }
-  }
-
-  // === Search (source: Z-Library) ===
-  if ($('#bookSearchBtn')) $('#bookSearchBtn').addEventListener('click', ()=>{
-    const q = $('#bookSearchInput').value.trim();
-    if (!q) { toast('请输入搜索关键词'); return; }
-    window.open(zlibSearchUrl(q), '_blank', 'noopener');
-    toast('已在 Z-Library 中搜索：' + q);
-  });
-  if ($('#bookSearchInput')) $('#bookSearchInput').addEventListener('keydown', e=>{
-    if (e.key === 'Enter') $('#bookSearchBtn').click();
-  });
-
-  // === Reading tasks & timer ===
-  $('#bookAddTask').addEventListener('click', ()=>{
-    const date=$('#bookDate').value, time=$('#bookTime').value, text=$('#bookTask').value.trim();
+initModule.books = function(){
+  var addBtn = document.getElementById('bookAddTask');
+  if (addBtn) addBtn.addEventListener('click', function(){
+    var date=document.getElementById('bookDate').value, time=document.getElementById('bookTime').value, text=document.getElementById('bookTask').value.trim();
     if(!text) return; state.books.tasks.push({id:uid(), date, time, text}); addDailyTask(date, text, 'books', time); saveState(); renderContent(); toast('阅读计划已添加');
   });
-  $$('.bookDelTask').forEach(b=> b.addEventListener('click', ()=>{
-    const t=state.books.tasks.find(x=>x.id===b.dataset.id); if(t) removeDailyTask(t.date, b.dataset.id);
-    state.books.tasks=state.books.tasks.filter(x=>x.id!==b.dataset.id); saveState(); renderContent();
-  }));
+  document.querySelectorAll('.bookDelTask').forEach(function(b){
+    b.addEventListener('click', function(){
+      var t=state.books.tasks.find(function(x){ return x.id===b.dataset.id; }); if(t) removeDailyTask(t.date, b.dataset.id);
+      state.books.tasks=state.books.tasks.filter(function(x){ return x.id!==b.dataset.id; }); saveState(); renderContent();
+    });
+  });
   initTimer('book');
 };
-async function renderBookList(container, books){
-  if (!books || !books.length) { container.innerHTML = '<div class="empty">暂无推荐，试试其他偏好</div>'; return; }
-  // 先为每本书批量准备 Z-Library 下载入口，再统一展示推荐
-  container.innerHTML = '<div class="empty">🔎 正在为每本书准备 Z-Library 下载入口...</div>';
-  await Promise.all(books.map(async b => {
-    b.dlUrl = await fetchBookDownload(b.title, b.author || '');
-  }));
-  if (!document.body.contains(container)) return; // 容器已被替换，避免写入过期内容
-  const direct = books.filter(b => b.dlUrl).length;
-  container.innerHTML = books.map(b => {
-    const btn = b.dlUrl
-      ? `<a class="btn btn-sm success" href="${escapeHtml(b.dlUrl)}" target="_blank" rel="noopener">📚 Z-Library 下载</a>`
-      : `<button class="btn btn-sm secondary bookSearchBtn" data-title="${escapeHtml(b.title)}">📚 在 Z-Library 搜索</button>`;
-    const meta = b.desc
-      ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">💡 ${escapeHtml(b.desc)}</div>`
-      : `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">中文推荐</div>`;
-    return `
-    <div class="book-item">
-      <div style="flex:1">
-        <div style="font-weight:700">${escapeHtml(b.title)}</div>
-        <div style="font-size:.8rem;color:var(--muted)">${escapeHtml(b.author)}${b.year ? ' · '+b.year : ''}</div>
-        ${meta}
-      </div>
-      <div>${btn}</div>
-    </div>`;
-  }).join('')
-  + (direct < books.length ? `<div class="card-subtitle" style="margin-top:.5rem">已为 ${direct}/${books.length} 本书准备好 Z-Library 下载入口，其余可点「在 Z-Library 搜索」查找。</div>` : '');
-  $$('.bookSearchBtn', container).forEach(btn => {
-    btn.addEventListener('click', () => window.open(zlibSearchUrl(btn.dataset.title), '_blank', 'noopener'));
-  });
-}
-// ===== 图书来源：Z-Library =====
-// 纯前端无法跨域抓取 Z-Library（CORS + 反爬/登录限制），所以“下载/查找”直接打开
-// Z-Library 的搜索页，由用户在其站内挑选版本并下载。
-// 若你常用的镜像域名不同，只需修改下面这一行常量即可。
-const ZLIB_BASE = 'https://zh.b-ok.cc';
-function zlibSearchUrl(title){
-  return ZLIB_BASE + '/s/' + encodeURIComponent((title||'').trim());
-}
-async function fetchBookDownload(title, author){
-  const key = 'zl_' + (title||'') + '|' + (author||'');
-  const cache = state.books.downloadCache = state.books.downloadCache || {};
-  if (cache[key]) return cache[key];
-  const url = zlibSearchUrl(title);
-  cache[key] = url;
-  saveState();
-  return url;
-}
-
 // ===== Timers / Day Matter =====
 renderers.timers = function(){
   return `<div class="card">
@@ -1902,25 +1691,15 @@ initModule.timers = function(){
 
 // ===== Kitchen (Cooking) =====
 renderers.kitchen = function(){
-  var isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
   return `<div class="card">
     <div class="card-title"><span class="ttl">🍳 饭香厨房</span></div>
     <div class="card-subtitle">菜谱来自 <a href="https://github.com/YunYouJun/cook" target="_blank" rel="noopener">🔗 YunYouJun/cook</a></div>
-  </div>
-  <div style="background:#fff;border-radius:var(--radius,18px);overflow:hidden;margin-top:.5rem;position:relative;min-height:70vh">
-    <iframe src="${isMobile ? 'https://cook.yunle.fun' : 'https://cook.yunyoujun.cn'}" style="width:100%;height:75vh;border:none;display:block" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" loading="lazy" title="饭香菜谱"></iframe>
-  </div>
-  <div class="card" style="margin-top:.5rem">
-    <button class="btn btn-secondary btn-block" id="openKitchenTab">🔗 在新标签页打开</button>
-    <div class="card-subtitle" style="margin-top:.5rem;text-align:center">如果加载异常，请点击上方按钮在新标签页访问。</div>
+    <a class="btn btn-block btn-lg" href="https://cook.yunyoujun.cn" target="_blank" rel="noopener" style="margin:.8rem 0">🔗 打开来做菜</a>
+    <div class="card-subtitle">也可访问国内加速站 <a href="https://cook.yunle.fun" target="_blank" rel="noopener">cook.yunle.fun</a></div>
   </div>`;
 };
-initModule.kitchen = function(){
-  var btn = document.getElementById('openKitchenTab');
-  if (btn) btn.addEventListener('click', function(){
-    window.open('https://cook.yunyoujun.cn', '_blank', 'noopener');
-  });
-};
+initModule.kitchen = function(){};
+
 
 
 // ===== Boot =====
