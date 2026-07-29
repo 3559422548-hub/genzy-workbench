@@ -441,19 +441,28 @@ function addDailyTask(date, text, source='daily', time=''){
 }
 function removeDailyTask(date, id){
   const list = getDailyTasks(date);
-  state.daily.tasks[date] = list.filter(t=>t.id!==id);
+  const t = list.find(x=>x.id===id);
+  if (t && t.done) removeTree();
+  state.daily.tasks[date] = list.filter(x=>x.id!==id);
   saveState();
 }
 function toggleDailyTask(date, id){
   const t = getDailyTasks(date).find(x=>x.id===id);
   if (!t) return;
+  const wasDone = t.done;
   t.done = !t.done;
-  if (t.done) plantTree();
+  if (t.done && !wasDone) plantTree();      // 完成 → 种树
+  else if (!t.done && wasDone) removeTree(); // 取消完成 → 撤回种植
   saveState();
 }
 function plantTree(){
   state.forest.total++;
   state.forest.trees.push({id:uid(), date:todayStr()});
+  saveState();
+}
+function removeTree(){
+  if (state.forest.total > 0) state.forest.total--;
+  if (state.forest.trees.length) state.forest.trees.pop();
   saveState();
 }
 
@@ -469,6 +478,7 @@ renderers.daily = function(){
   const total = tasks.length;
   const pct = total ? Math.round(done/total*100) : 0;
   const forestOpen = state.daily.forestOpen!==false;
+  const todayTrees = state.forest.trees.filter(tr=>tr.date===todayStr()).length;
   return `
   <div class="card">
     <div class="card-title"><span>🌲 每日计划</span><span class="pill">${fmtDate(date)}</span></div>
@@ -478,10 +488,10 @@ renderers.daily = function(){
     </div>
   </div>
   <div class="card">
-    <div class="card-title collap-head" id="forestHead"><span>林地 · 已种 ${state.forest.total} 棵树</span><span>${forestOpen?'▾':'▸'}</span></div>
+    <div class="card-title collap-head" id="forestHead"><span>林地 · 累计 ${state.forest.total} 棵（今日 +${todayTrees}）</span><span>${forestOpen?'▾':'▸'}</span></div>
     <div class="collap-body" id="forestBody" style="max-height:${forestOpen?'1000px':'0px'}">
       <div class="forest-grid" style="margin-top:.7rem">${state.forest.trees.slice(-150).map(()=>`<div class="tree">🌲</div>`).join('') || '<div class="empty" style="grid-column:1/-1">完成任务来种树吧</div>'}</div>
-      <div class="card-subtitle">每完成一项任务种下一棵虚拟树，与 Genzy 一起成长。</div>
+      <div class="card-subtitle">完成任务种一棵树，取消完成则撤回；每日种植持续累积，与 Genzy 一起成长。</div>
     </div>
   </div>
   <div class="card">
