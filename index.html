@@ -1942,7 +1942,7 @@ initModule.books = async function(){
           ${b.olKey ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">来自 Open Library</div>` : `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">中文推荐</div>`}
         </div>
         <div>
-          <a class="btn btn-sm" href="https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(b.title)}" target="_blank" rel="noopener">找 epub</a>
+          <button class="btn btn-sm bookDlBtn" data-title="${escapeHtml(b.title)}" data-author="${escapeHtml(b.author||'')}">🔍 找下载</button>
         </div>
       </div>`).join('');
   });
@@ -1963,18 +1963,87 @@ initModule.books = async function(){
 };
 function renderBookList(container, books){
   if (!books || !books.length) { container.innerHTML = '<div class="empty">暂无推荐，试试其他偏好</div>'; return; }
-  container.innerHTML = books.map(b => `
+  const cache = state.books.downloadCache || {};
+  container.innerHTML = books.map((b, i) => {
+    const cached = cache[b.title + b.author];
+    const btnHtml = cached
+      ? `<a class="btn btn-sm success" href="${escapeHtml(cached)}" target="_blank" rel="noopener">⬇️ 下载 epub</a>`
+      : `<button class="btn btn-sm bookDlBtn" data-title="${escapeHtml(b.title)}" data-author="${escapeHtml(b.author)}">🔍 找下载</button>`;
+    return `
     <div class="book-item">
       <div style="flex:1">
         <div style="font-weight:700">${escapeHtml(b.title)}</div>
         <div style="font-size:.8rem;color:var(--muted)">${escapeHtml(b.author)}</div>
         <div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">💡 ${escapeHtml(b.desc || '经典好书推荐')}</div>
       </div>
-      <div>
-        <a class="btn btn-sm" href="https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(b.title)}" target="_blank" rel="noopener">找 epub</a>
-      </div>
-    </div>
-  `).join('');
+      <div>${btnHtml}</div>
+    </div>`;
+  }).join('');
+  // Init download buttons
+  $$('.bookDlBtn').forEach(btn => {
+    btn.addEventListener('click', async ()=>{
+      const title = btn.dataset.title;
+      const author = btn.dataset.author;
+      btn.textContent = '🔎 查找中...';
+      btn.disabled = true;
+      const url = await fetchBookDownload(title, author);
+      if (url) {
+        // Cache and update
+        state.books.downloadCache = state.books.downloadCache || {};
+        state.books.downloadCache[title + author] = url;
+        saveState();
+        btn.outerHTML = `<a class="btn btn-sm success" href="${escapeHtml(url)}" target="_blank" rel="noopener">⬇️ 下载 epub</a>`;
+        // Auto click
+        setTimeout(() => {
+          const newBtn = container.querySelector('.btn.success:last-child');
+          if (newBtn) window.open(url, '_blank', 'noopener');
+        }, 100);
+      } else {
+        btn.textContent = '📖 搜索其他版本';
+        btn.disabled = false;
+        btn.className = 'btn btn-sm secondary';
+        btn.onclick = () => window.open(`https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(title)}`, '_blank', 'noopener');
+      }
+    });
+  });
+}
+async function fetchBookDownload(title, author){
+  const key = `dl_${title}_${author}`.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_').slice(0,80);
+  // Check cache first
+  if (state.books.downloadCache && state.books.downloadCache[key]) return state.books.downloadCache[key];
+  // Search Gutendex
+  try {
+    const res = await fetch(`https://gutendex.com/books/?search=${encodeURIComponent(title)}`);
+    if (!res.ok) throw new Error('fail');
+    const data = await res.json();
+    const results = data.results || [];
+    // Try exact title match
+    const t = title.toLowerCase().slice(0,12);
+    let match = results.find(b => b.title.toLowerCase().includes(t));
+    if (!match && author) {
+      const a = author.split(/[\s·,，、]/).filter(Boolean)[0];
+      if (a) match = results.find(b => b.title.toLowerCase().includes(a.toLowerCase()));
+    }
+    if (!match && results.length) match = results[0];
+    if (match) {
+      const url = `https://www.gutenberg.org/ebooks/${match.id}.epub.images`;
+      return url;
+    }
+  } catch(e) { /* fallback */ }
+  // Try Open Library
+  try {
+    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(title)}&limit=3&fields=title,author_name,ia`);
+    if (!res.ok) throw new Error('fail');
+    const data = await res.json();
+    if (data.docs && data.docs.length) {
+      const d = data.docs[0];
+      if (d.ia && d.ia.length) {
+        const url = `https://archive.org/details/${d.ia[0]}`;
+        return url;
+      }
+    }
+  } catch(e) { /* fallback */ }
+  return null;
 }
 
 // ===== Timers / Day Matter =====
