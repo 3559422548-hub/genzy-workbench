@@ -580,84 +580,7 @@ function stopTick(key){
 }
 
 // ===== English (Echo Loop) =====
-const EN_STEPS = ['盲听','精听','跟读','复述'];
-function parseSubtitles(text){
-  const lines = text.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-  const srt = [];
-  // Try SRT
-  const srtRe = /(\d+)\s*\n(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/;
-  for (let i=0;i<lines.length;i++){
-    const m = lines[i].match(srtRe);
-    if (m && lines[i+1]) { srt.push({start: parseTime(m[2]), end: parseTime(m[3]), text: lines[i+1]}); i++; }
-  }
-  if (srt.length) return srt;
-  // Try LRC
-  const lrcRe = /^\[(\d{2}):(\d{2}\.\d+)\](.*)$/;
-  const lrc = [];
-  lines.forEach(l=>{ const m=l.match(lrcRe); if(m) lrc.push({time: parseInt(m[1])*60+parseFloat(m[2]), text:m[3]}); });
-  lrc.sort((a,b)=>a.time-b.time);
-  if (lrc.length) return lrc.map((x,i)=>({start:x.time, end: lrc[i+1]?lrc[i+1].time:x.time+4, text:x.text}));
-  // Plain text split sentences
-  const raw = text.replace(/([。！？.!?])\s+/g,"$1\n").split('\n').map(s=>s.trim()).filter(Boolean);
-  return raw.map((s,i)=>({start:null, end:null, text:s}));
-}
-function parseTime(t){ const p=t.replace(',','.').split(':'); return parseInt(p[0])*3600+parseInt(p[1])*60+parseFloat(p[2]); }
-
 renderers.english = function(){
-  const lesson = state.english.lessons.find(l=>l.id===state.english.currentLessonId);
-  const stepIdx = state.english.currentStep || 0;
-  let body = '';
-  if (!lesson){
-    body = `<div class="card"><div class="card-title">导入学习材料</div>
-      <div class="form-row">
-        <div style="flex:1"><label>音频文件</label><input type="file" class="input" id="enAudioFile" accept="audio/*"></div>
-        <div style="flex:1"><label>字幕文件（.srt / .lrc / .txt）</label><input type="file" class="input" id="enSubFile" accept=".srt,.lrc,.txt"></div>
-      </div>
-      <div class="form-row"><input class="input" id="enLessonName" placeholder="课程名称（可选）"></div>
-      <button class="btn" id="enCreateLesson">开始 Echo Loop</button>
-      <div class="card-subtitle">支持盲听 → 精听 → 跟读 → 复述的科学训练闭环。</div>
-    </div>
-    ${renderLessonList()}`;
-  } else {
-    const sentences = lesson.sentences || [];
-    const cur = Math.min(state.english.currentSentence||0, sentences.length-1);
-    const curSent = sentences[cur];
-    body = `<div class="card">
-      <div class="card-title"><span>${escapeHtml(lesson.name)}</span><button class="btn btn-sm secondary" id="enCloseLesson">返回列表</button></div>
-      <audio id="enAudio" class="audio-box" controls src="${lesson.audioSrc}"></audio>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0">
-        ${EN_STEPS.map((s,i)=>`<span class="pill ${i===stepIdx?'accent':''}" style="${i===stepIdx?'background:var(--accent);color:#fff':''}">${i+1}. ${s}</span>`).join('')}
-      </div>
-      <div class="form-row" style="justify-content:center">
-        <button class="btn" id="enPrevStep" ${stepIdx<=0?'disabled':''}>上一步</button>
-        <button class="btn accent" id="enPlayAll">${stepIdx===0?'盲听整段':'播放当前句'}</button>
-        <button class="btn" id="enNextStep" ${stepIdx>=EN_STEPS.length-1?'disabled':''}>下一步</button>
-      </div>
-      ${stepIdx===1 || stepIdx===2 || stepIdx===3 ? `<div class="card" style="background:var(--surface-2);box-shadow:none">
-        <div style="font-size:1.05rem;margin-bottom:.6rem">${curSent ? escapeHtml(curSent.text) : '暂无句子'}</div>
-        <div class="form-row" style="justify-content:center">
-          <button class="btn btn-sm" id="enPrevSent">上一句</button>
-          <button class="btn btn-sm secondary" id="enStarSent">⭐ 收藏难句</button>
-          <button class="btn btn-sm" id="enNextSent">下一句</button>
-        </div>
-      </div>`:''}
-      ${stepIdx===2 ? `<div class="card" style="background:var(--surface-2);box-shadow:none">
-        <div class="card-subtitle">点击录音，跟读当前句子</div>
-        <div class="form-row" style="justify-content:center">
-          <button class="btn accent" id="enRecord">🎙️ 开始跟读</button>
-        </div>
-        <div id="enRecResult" style="min-height:1.5rem;text-align:center;font-weight:700"></div>
-      </div>`:''}
-      ${stepIdx===3 ? `<div class="card" style="background:var(--surface-2);box-shadow:none">
-        <div class="card-subtitle">不看原文，用英文复述大意</div>
-        <textarea class="textarea" id="enRetell" rows="3" placeholder="输入复述内容..."></textarea>
-        <button class="btn" id="enSaveRetell" style="margin-top:.5rem">保存复述</button>
-      </div>`:''}
-    </div>
-    <div class="card"><div class="card-title">难句收藏夹 (${state.english.difficult.length})</div>
-      <div>${state.english.difficult.slice(-20).map(s=>`<div class="list-item"><div class="item-text">${escapeHtml(s.text)}</div></div>`).join('') || '<div class="empty">暂无难句</div>'}</div>
-    </div>`;
-  }
   const appCard = `<div class="card">
     <div class="card-title">📱 打开学习 App</div>
     <div class="grid-2">
@@ -676,21 +599,8 @@ renderers.english = function(){
     </div>
     <div>${renderTaskTable(state.english.tasks, 'eng')}</div>
   </div>`;
-  return appCard + taskCard + body;
+  return appCard + taskCard;
 };
-function renderLessonList(){
-  if (!state.english.lessons.length) return '';
-  return `<div class="card"><div class="card-title">课程列表</div>
-    ${state.english.lessons.map(l=>`
-      <div class="list-item">
-        <div class="item-text">${escapeHtml(l.name)} <span class="pill">${(l.sentences||[]).length} 句</span></div>
-        <div class="item-actions">
-          <button class="btn btn-sm enOpenLesson" data-id="${l.id}">打开</button>
-          <button class="btn btn-sm danger enDelLesson" data-id="${l.id}">删</button>
-        </div>
-      </div>`).join('')}
-  </div>`;
-}
 initModule.english = function(){
   if ($('#enOpenEcho')) $('#enOpenEcho').addEventListener('click', ()=> openApp('echoloop://', 'https://www.echo-loop.top/zh-CN'));
   if ($('#enOpenDuolingo')) $('#enOpenDuolingo').addEventListener('click', ()=> openApp('duolingo://', 'https://www.duolingo.com'));
@@ -702,83 +612,7 @@ initModule.english = function(){
     const t=state.english.tasks.find(x=>x.id===b.dataset.id); if(t) removeDailyTask(t.date, b.dataset.id);
     state.english.tasks=state.english.tasks.filter(x=>x.id!==b.dataset.id); saveState(); renderContent();
   }));
-  if (!$('#enCreateLesson') && !$('#enCloseLesson')) return;
-  let audioFile, subText='';
-  $('#enAudioFile').addEventListener('change', e=>{ audioFile=e.target.files[0]; });
-  $('#enSubFile').addEventListener('change', e=>{
-    const f=e.target.files[0]; if(!f) return;
-    const r=new FileReader(); r.onload=ev=>{ subText=ev.target.result; }; r.readAsText(f);
-  });
-  $('#enCreateLesson').addEventListener('click', ()=>{
-    if (!audioFile) { toast('请先选择音频文件'); return; }
-    const name = $('#enLessonName').value.trim() || audioFile.name;
-    const sentences = parseSubtitles(subText || name);
-    const audioSrc = URL.createObjectURL(audioFile);
-    const lesson = {id:uid(), name, audioSrc, sentences, created:Date.now()};
-    state.english.lessons.push(lesson); state.english.currentLessonId=lesson.id; state.english.currentStep=0; state.english.currentSentence=0;
-    saveState(); renderContent(); toast('课程创建成功');
-  });
-  $$('.enOpenLesson').forEach(b=> b.addEventListener('click', ()=>{ state.english.currentLessonId=b.dataset.id; saveState(); renderContent(); }));
-  $$('.enDelLesson').forEach(b=> b.addEventListener('click', ()=>{
-    state.english.lessons = state.english.lessons.filter(l=>l.id!==b.dataset.id);
-    if (state.english.currentLessonId===b.dataset.id) state.english.currentLessonId=null;
-    saveState(); renderContent();
-  }));
-  // Lesson controls
-  const lesson = state.english.lessons.find(l=>l.id===state.english.currentLessonId);
-  if (!lesson) return;
-  const audio = $('#enAudio');
-  const sentences = lesson.sentences||[];
-  const playRange = (start,end)=>{
-    if (start==null) { audio.play(); return; }
-    audio.currentTime = start;
-    audio.play();
-    const stop = ()=>{ if (end!=null && audio.currentTime>=end) { audio.pause(); audio.removeEventListener('timeupdate', stop); } };
-    audio.addEventListener('timeupdate', stop);
-  };
-  $('#enCloseLesson').addEventListener('click', ()=>{ state.english.currentLessonId=null; saveState(); renderContent(); });
-  $('#enPrevStep').addEventListener('click', ()=>{ if(state.english.currentStep>0){state.english.currentStep--; saveState(); renderContent();} });
-  $('#enNextStep').addEventListener('click', ()=>{ if(state.english.currentStep<EN_STEPS.length-1){state.english.currentStep++; saveState(); renderContent();} });
-  $('#enPlayAll').addEventListener('click', ()=>{
-    if (state.english.currentStep===0) { audio.currentTime=0; audio.play(); }
-    else { const s=sentences[state.english.currentSentence]; if(s) playRange(s.start, s.end); }
-  });
-  if ($('#enPrevSent')) $('#enPrevSent').addEventListener('click', ()=>{ if(state.english.currentSentence>0){state.english.currentSentence--; saveState(); renderContent();} });
-  if ($('#enNextSent')) $('#enNextSent').addEventListener('click', ()=>{ if(state.english.currentSentence<sentences.length-1){state.english.currentSentence++; saveState(); renderContent();} });
-  if ($('#enStarSent')) $('#enStarSent').addEventListener('click', ()=>{
-    const s=sentences[state.english.currentSentence]; if(!s) return;
-    if(!state.english.difficult.find(d=>d.text===s.text)){ state.english.difficult.push({text:s.text, lessonId:lesson.id}); saveState(); toast('已收藏难句'); renderContent(); }
-  });
-  if ($('#enRecord')) initSpeechRecognition();
-  if ($('#enSaveRetell')) $('#enSaveRetell').addEventListener('click', ()=>{
-    const txt=$('#enRetell').value.trim(); if(!txt) return;
-    state.english.difficult.push({text:'复述: '+txt, lessonId:lesson.id, type:'retell'});
-    saveState(); $('#enRetell').value=''; toast('复述已保存');
-  });
 };
-function initSpeechRecognition(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { $('#enRecResult').textContent = '浏览器不支持语音识别'; return; }
-  const rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
-  $('#enRecord').addEventListener('click', ()=>{
-    $('#enRecResult').textContent = '聆听中...';
-    try { rec.start(); } catch(e){ toast('录音启动失败'); }
-  });
-  rec.onresult = e => {
-    const t = e.results[0][0].transcript;
-    $('#enRecResult').textContent = '识别结果：' + t;
-    // Simple similarity score
-    const lesson = state.english.lessons.find(l=>l.id===state.english.currentLessonId);
-    const s = lesson.sentences[state.english.currentSentence];
-    if (s) {
-      const target = s.text.toLowerCase().split(/\s+/); const said = t.toLowerCase().split(/\s+/);
-      const hit = said.filter(w=>target.includes(w)).length;
-      const score = target.length ? Math.round(hit/target.length*100) : 0;
-      $('#enRecResult').innerHTML += `<div style="margin-top:.4rem;color:var(--accent)">命中率 ${score}% · ${score>=70?'Great!':'再试一次'}</div>`;
-    }
-  };
-  rec.onerror = ()=>{ $('#enRecResult').textContent = '识别失败，请重试'; };
-}
 
 // ===== Fitness =====
 renderers.fitness = function(){
