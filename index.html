@@ -551,6 +551,54 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
 .diary-bottle-card .text{font-size:.85rem;line-height:1.4;white-space:pre-wrap;word-break:break-word;}
 .diary-bottle-card.pending .text{filter:blur(4px);user-select:none;cursor:not-allowed;}
 
+/* ===== Weather (iOS-style, lavender theme) ===== */
+.wx-wrap { background: #ece6f5; border-radius: 22px; padding: 1rem 1rem .8rem; color: #1a1a1a; }
+.wx-loc { display:flex;justify-content:space-between;align-items:center; font-weight:600; font-size:1rem; padding:.2rem .3rem .8rem; }
+.wx-loc .gear { font-size:1.15rem; cursor:pointer; opacity:.7; }
+.wx-hero { text-align:center; padding:.6rem 0 1.2rem; }
+.wx-hero-ico { font-size:4.5rem; line-height:1; margin-bottom:.3rem; }
+.wx-hero-name { font-size:1.05rem; font-weight:600; letter-spacing:.5px; }
+.wx-main { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; align-items:center; }
+.wx-temp-circle { background:#0a0a0a; color:#fff; border-radius:50%; aspect-ratio:1/1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:.6rem; box-shadow: 0 4px 18px rgba(0,0,0,.18); }
+.wx-temp-circle .t { font-size:2.6rem; font-weight:300; line-height:1; letter-spacing:-1px; }
+.wx-temp-circle .hilo { font-size:.7rem; opacity:.65; margin-top:.4rem; font-weight:500; }
+.wx-side { display:flex; flex-direction:column; gap:.5rem; }
+.wx-pill { background:#fff; border-radius:14px; padding:.55rem .75rem; display:flex; flex-direction:column; gap:.15rem; }
+.wx-pill .lbl { font-size:.78rem; font-weight:600; color:#1a1a1a; }
+.wx-pill .val { font-size:1.15rem; font-weight:600; }
+.wx-pill .sub { font-size:.7rem; color:#888; }
+.wx-divider { height:1px; background:rgba(0,0,0,.08); margin:1rem 0 .8rem; }
+.wx-hourly { display:flex; gap:.4rem; overflow-x:auto; padding:.2rem 0 .4rem; scrollbar-width:none; }
+.wx-hourly::-webkit-scrollbar{ display:none; }
+.wx-hour-cell { flex-shrink:0; text-align:center; background:#fff; border-radius:12px; padding:.5rem .65rem; min-width:54px; }
+.wx-hour-cell .h { font-size:.72rem; color:#666; }
+.wx-hour-cell .e { font-size:1.1rem; line-height:1.1; margin:.15rem 0; }
+.wx-hour-cell .t { font-size:.78rem; font-weight:600; }
+.wx-day-strip { display:flex; gap:.4rem; overflow-x:auto; padding:.2rem 0 .4rem; scrollbar-width:none; }
+.wx-day-strip::-webkit-scrollbar{ display:none; }
+.wx-day-cell { flex-shrink:0; text-align:center; background:#fff; border-radius:12px; padding:.5rem .55rem; min-width:60px; }
+.wx-day-cell .d { font-size:.72rem; color:#666; }
+.wx-day-cell .e { font-size:1.1rem; line-height:1.1; margin:.1rem 0; }
+.wx-day-cell .h { font-size:.78rem; font-weight:600; }
+.wx-day-cell .l { font-size:.7rem; color:#888; }
+.wx-grid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; margin-top:.5rem; }
+.wx-metric { background:#fff; border-radius:16px; padding:.65rem .7rem; min-height:120px; display:flex; flex-direction:column; justify-content:space-between; }
+.wx-metric .lbl { font-size:.85rem; font-weight:700; }
+.wx-metric .sub { font-size:.7rem; color:#888; margin-top:.05rem; }
+.wx-metric .vis { display:flex; align-items:flex-end; gap:.4rem; }
+.wx-metric .vis .v { font-size:1.6rem; font-weight:700; line-height:1; }
+.wx-metric .vis .u { font-size:.7rem; color:#888; margin-bottom:.15rem; }
+.wx-gauge { position:relative; height:50px; margin-top:.3rem; }
+.wx-gauge svg { width:100%; height:100%; }
+.wx-bcircle { background:#0a0a0a; color:#fff; border-radius:50%; width:60px; height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin:.3rem auto 0; }
+.wx-bcircle .v { font-size:1rem; font-weight:700; line-height:1; }
+.wx-bcircle .u { font-size:.6rem; opacity:.6; margin-top:.1rem; }
+.wx-compass { width:64px; height:64px; position:relative; margin:.2rem auto 0; }
+.wx-uv-stack { position:relative; width:60px; height:50px; margin:.3rem auto 0; }
+.wx-uv-stack svg { position:absolute; inset:0; width:100%; height:100%; }
+.wx-sunset-gauge { position:relative; height:34px; margin:.3rem 0 .2rem; }
+.wx-sunset-gauge svg { width:100%; height:100%; }
+
 /* ===== Link cards (masonry-style) ===== */
 .links-masonry {
   column-count: 2;
@@ -886,6 +934,9 @@ function saveState(){
     Storage.set('bills', state.bills);
     Storage.set('homework', state.homework);
     Storage.set('books', state.books);
+    Storage.set('kitchen', state.kitchen);
+    Storage.set('diary', state.diary);
+    Storage.set('weather', state.weather);
     Storage.set('timers', state.timers);
   }, 200);
 }
@@ -1462,7 +1513,10 @@ initModule.english = function(){
   var vocabCard = document.getElementById('vocabCard');
   if(vocabCard) vocabCard.addEventListener('click', function(){
     var word = vocabCard.dataset.word;
-    if(word) openApp('bubeiword://search?word=' + encodeURIComponent(word), 'https://apps.apple.com/cn/app/id698570469');
+    if(word) openApp(
+      'shortcuts://run-shortcut?name=' + encodeURIComponent('不背单词') + '&input=text&text=' + encodeURIComponent(word),
+      'https://apps.apple.com/cn/app/id698570469'
+    );
   });
   // Auto-refresh flashcard every hour
   var nextHourMs = (60 - new Date().getMinutes()) * 60 * 1000;
@@ -1558,6 +1612,10 @@ renderers.fitness = function(){
       <input class="input" id="fitNewGroup" placeholder="新分类组">
       <button class="btn btn-sm secondary" id="fitAddGroup">添加分类</button>
     </div>
+    <div class="form-row" style="margin-top:.3rem">
+      <select class="select" id="fitDelGroup">${(state.fitness.groups||[]).map(g=>`<option>${escapeHtml(g)}</option>`).join('')}</select>
+      <button class="btn btn-sm danger" id="fitDelGroupBtn">删除该分类</button>
+    </div>
     ${renderLinkCards(state.fitness.links, 'fit')}
   </div>
   <div class="card">
@@ -1581,7 +1639,23 @@ initModule.fitness = function(){
     if(!name||!url) return; state.fitness.links.push({id:uid(), name, url, group}); saveState(); renderContent(); toast('链接已保存');
   });
   $('#fitAddGroup').addEventListener('click', ()=>{
-    const g=$('#fitNewGroup').value.trim(); if(!g) return; if(!state.fitness.groups.includes(g)) state.fitness.groups.push(g); saveState(); renderContent();
+    const g=$('#fitNewGroup').value.trim(); if(!g) return;
+    if(!state.fitness.groups.includes(g)) state.fitness.groups.push(g);
+    saveState();
+    $('#fitNewGroup').value = '';
+    renderContent();
+    // Auto-select the new group in the delete dropdown for immediate next step
+    const sel = document.getElementById('fitDelGroup'); if(sel){ sel.value = g; }
+    const lsel = document.getElementById('fitLinkGroup'); if(lsel){ lsel.value = g; }
+    toast('已添加分类：' + g);
+  });
+  $('#fitDelGroupBtn').addEventListener('click', ()=>{
+    const g=$('#fitDelGroup').value; if(!g) return;
+    if(!confirm(`确定删除分类「${g}」？该分类下的链接将被移入「默认」`)) return;
+    state.fitness.groups = state.fitness.groups.filter(x=>x!==g);
+    state.fitness.links = state.fitness.links.map(l=> l.group===g ? Object.assign({}, l, {group:'默认'}) : l);
+    if(state.fitness.groups.length===0 || !state.fitness.groups.includes('默认')) state.fitness.groups.unshift('默认');
+    saveState(); renderContent(); toast('分类已删除');
   });
   bindLinkCardActions('fit');
   $('#fitAddTask').addEventListener('click', ()=>{
@@ -1649,6 +1723,10 @@ renderers.collections = function(){
       <input class="input" id="colNewGroup" placeholder="新分类组">
       <button class="btn btn-sm secondary" id="colAddGroup">添加分类</button>
     </div>
+    <div class="form-row" style="margin-top:.3rem">
+      <select class="select" id="colDelGroup">${(state.collections.groups||[]).map(g=>`<option>${escapeHtml(g)}</option>`).join('')}</select>
+      <button class="btn btn-sm danger" id="colDelGroupBtn">删除该分类</button>
+    </div>
     ${renderLinkCards(state.collections.links, 'col')}
   </div>`;
 };
@@ -1658,7 +1736,22 @@ initModule.collections = function(){
     if(!name||!url) return; state.collections.links.push({id:uid(), name, url, group}); saveState(); renderContent(); toast('收藏已保存');
   });
   $('#colAddGroup').addEventListener('click', ()=>{
-    const g=$('#colNewGroup').value.trim(); if(!g) return; if(!state.collections.groups.includes(g)) state.collections.groups.push(g); saveState(); renderContent();
+    const g=$('#colNewGroup').value.trim(); if(!g) return;
+    if(!state.collections.groups.includes(g)) state.collections.groups.push(g);
+    saveState();
+    $('#colNewGroup').value = '';
+    renderContent();
+    const sel = document.getElementById('colDelGroup'); if(sel){ sel.value = g; }
+    const lsel = document.getElementById('colGroup'); if(lsel){ lsel.value = g; }
+    toast('已添加分类：' + g);
+  });
+  $('#colDelGroupBtn').addEventListener('click', ()=>{
+    const g=$('#colDelGroup').value; if(!g) return;
+    if(!confirm(`确定删除分类「${g}」？该分类下的收藏将被移入「默认」`)) return;
+    state.collections.groups = state.collections.groups.filter(x=>x!==g);
+    state.collections.links = state.collections.links.map(l=> l.group===g ? Object.assign({}, l, {group:'默认'}) : l);
+    if(state.collections.groups.length===0 || !state.collections.groups.includes('默认')) state.collections.groups.unshift('默认');
+    saveState(); renderContent(); toast('分类已删除');
   });
   bindLinkCardActions('col');
 };
@@ -2104,8 +2197,7 @@ initModule.diary = function(){
       if(!ds) return;
       var e = (state.diary.entries||{})[ds];
       var cnt = e ? '<div style="text-align:center;font-size:3rem;margin:.5rem 0">'+e.mood+'</div><div style="white-space:pre-wrap;font-size:.9rem;line-height:1.5">'+escapeHtml(e.text||'（无文字）')+'</div>' : '<div class="empty"><div class="ico">'+String.fromCharCode(128221)+'</div>这天还没有日记</div>';
-      var html = '<div class="modal-content"><div class="modal-title">'+String.fromCharCode(128214)+' '+ds+' 的日记</div><div style="margin-top:1rem">'+cnt+'</div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">关闭</button></div></div>';
-      el('modal').innerHTML = html; el('modalOverlay').classList.add('show');
+      modal(String.fromCharCode(128214)+' '+ds+' 的日记', cnt);
     });
   });
   // Mood
@@ -2142,7 +2234,7 @@ initModule.diary = function(){
     var input = el('diaryMoodInput');
     var val = (input.value||'').trim();
     if(!val){ toast('请输入 emoji'); return; }
-    state.diary.moods = state.diary.moods || DEFAULT_MOODS;
+    state.diary.moods = (state.diary.moods || DEFAULT_MOODS).slice();
     state.diary.moods.push(val);
     saveState(); renderContent();
   });
@@ -2169,9 +2261,17 @@ initModule.diary = function(){
 // ===== Weather =====
 async function fetchWeather(lat, lon){
   try {
-    var res = await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto');
+    var res = await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunset,sunrise,uv_index_max&hourly=temperature_2m,weather_code&timezone=auto&forecast_days=7');
     if(!res.ok) throw new Error('fail');
     return await res.json();
+  } catch(e){ return null; }
+}
+async function fetchAirQuality(lat, lon){
+  try {
+    var res = await fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude='+lat+'&longitude='+lon+'&current=us_aqi,pm2_5');
+    if(!res.ok) throw new Error('fail');
+    var d = await res.json();
+    return d.current ? d.current : null;
   } catch(e){ return null; }
 }
 const WMO_CODES = {
@@ -2181,55 +2281,252 @@ const WMO_CODES = {
 };
 const WMO_NAMES = {0:'晴朗',1:'少云',2:'多云',3:'阴天',45:'雾',48:'雾',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'小阵雨',81:'中阵雨',82:'大阵雨',95:'雷暴',96:'雷暴',99:'雷暴'};
 
+function aqiLevel(a){
+  if(a==null||isNaN(a)) return {txt:'—', cls:'good'};
+  if(a<=50) return {txt:'优', cls:'good'};
+  if(a<=100) return {txt:'良', cls:'moderate'};
+  if(a<=150) return {txt:'轻度污染', cls:'unhealthy-sensitive'};
+  if(a<=200) return {txt:'中度污染', cls:'unhealthy'};
+  if(a<=300) return {txt:'重度污染', cls:'very-unhealthy'};
+  return {txt:'严重污染', cls:'hazardous'};
+}
+function uvLevel(u){
+  if(u==null||isNaN(u)) return {txt:'—', lv:0};
+  if(u<=2) return {txt:'低', lv:1};
+  if(u<=5) return {txt:'中等', lv:2};
+  if(u<=7) return {txt:'高', lv:3};
+  if(u<=10) return {txt:'很高', lv:4};
+  return {txt:'极高', lv:5};
+}
+function fmtHM(iso){
+  if(!iso) return '—';
+  var m = String(iso).match(/T(\d{2}):(\d{2})/);
+  return m ? m[1]+':'+m[2] : '—';
+}
+function compassArrow(deg){
+  if(deg==null||isNaN(deg)) return '·';
+  var dirs = ['N','NE','E','SE','S','SW','W','NW'];
+  return dirs[Math.round(deg/45)%8];
+}
+function gaugeSVG(value, max, color){
+  var pct = Math.max(0, Math.min(1, value/max));
+  var r = 40, cx = 50, cy = 45;
+  var startA = Math.PI;
+  var endA = 0;
+  var sweep = pct * Math.PI;
+  var ang = startA - sweep;
+  var x1 = cx + r * Math.cos(startA), y1 = cy + r * Math.sin(startA);
+  var x2 = cx + r * Math.cos(ang), y2 = cy + r * Math.sin(ang);
+  var xBack = cx + r * Math.cos(endA), yBack = cy + r * Math.sin(endA);
+  var largeArc = pct > 0.5 ? 1 : 0;
+  var arc = 'M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2;
+  var back = 'M ' + x2 + ' ' + y2 + ' A ' + r + ' ' + r + ' 0 ' + (1-largeArc) + ' 1 ' + xBack + ' ' + yBack;
+  return '<svg viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet">' +
+    '<path d="' + back + '" stroke="#e6e1f0" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+    '<path d="' + arc + '" stroke="' + color + '" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+    '<circle cx="' + (cx + r * Math.cos(ang)) + '" cy="' + (cy + r * Math.sin(ang)) + '" r="3" fill="' + color + '"/>' +
+  '</svg>';
+}
+function compassSVG(deg){
+  return '<svg viewBox="-50 -50 100 100" style="width:64px;height:64px">' +
+    '<circle cx="0" cy="0" r="44" fill="#fff" stroke="#e6e1f0" stroke-width="2"/>' +
+    '<circle cx="0" cy="0" r="30" fill="none" stroke="#e6e1f0" stroke-width="1" stroke-dasharray="2 3"/>' +
+    '<g transform="rotate(' + (deg||0) + ')">' +
+      '<polygon points="0,-38 5,0 0,4 -5,0" fill="#0a0a0a"/>' +
+      '<polygon points="0,38 5,0 0,-4 -5,0" fill="#bbb"/>' +
+    '</g>' +
+    '<text x="0" y="-44" text-anchor="middle" font-size="10" font-weight="700" fill="#0a0a0a">N</text>' +
+  '</svg>';
+}
+function uvSVG(lv){
+  var colors = ['#e6e1f0','#a3e635','#facc15','#fb923c','#ef4444','#7c3aed'];
+  var c = colors[lv] || colors[0];
+  var inner = lv >= 1 ? '<ellipse cx="0" cy="0" rx="12" ry="5" fill="' + c + '"/>' : '';
+  return '<svg viewBox="-50 -25 100 50" style="width:60px;height:30px">' +
+    '<ellipse cx="0" cy="0" rx="42" ry="18" fill="none" stroke="#d6d0e8" stroke-width="1.5"/>' +
+    '<ellipse cx="0" cy="0" rx="32" ry="14" fill="none" stroke="#d6d0e8" stroke-width="1.5"/>' +
+    '<ellipse cx="0" cy="0" rx="22" ry="10" fill="none" stroke="#d6d0e8" stroke-width="1.5"/>' +
+    inner +
+  '</svg>';
+}
+function sunsetSVG(pct){
+  var r = 40, cx = 50, cy = 45;
+  var startA = Math.PI, endA = 0;
+  var sweep = pct * Math.PI;
+  var ang = startA - sweep;
+  var x1 = cx + r * Math.cos(startA), y1 = cy + r * Math.sin(startA);
+  var x2 = cx + r * Math.cos(ang), y2 = cy + r * Math.sin(ang);
+  var xBack = cx + r * Math.cos(endA), yBack = cy + r * Math.sin(endA);
+  var largeArc = pct > 0.5 ? 1 : 0;
+  var arc = 'M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2;
+  var back = 'M ' + x2 + ' ' + y2 + ' A ' + r + ' ' + r + ' 0 ' + (1-largeArc) + ' 1 ' + xBack + ' ' + yBack;
+  return '<svg viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet">' +
+    '<path d="' + back + '" stroke="#e6e1f0" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+    '<path d="' + arc + '" stroke="#f59e0b" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+  '</svg>';
+}
+
 renderers.weather = function(){
   var d = state.weather;
-  if(!d || d.error) return '<div class="card"><div class="card-title">' + String.fromCharCode(127781) + ' 每日天气</div><div class="empty">天气数据加载中..</div><button class="btn btn-block secondary" id="weatherRetry">重试</button></div>';
-  if(!d.data) return '<div class="card"><div class="card-title">' + String.fromCharCode(127781) + ' 每日天气</div><div class="empty">' + (d.loading?'加载中..':'无法获取天气，<button class="btn btn-sm secondary" id="weatherRetry">重试</button>') + '</div></div>';
-  var cx = d.data.current; var dy = d.data.daily;
-  var code = cx.weather_code; var emoji = WMO_CODES[code] || '☀️'; var name = WMO_NAMES[code] || '未知';
-  return '<div class="card"><div class="card-title"><span class="ttl">' + String.fromCharCode(127781) + ' 每日天气</span><span class="pill">' + escapeHtml(d.city) + '</span></div>' +
-    '<div style="display:flex;align-items:center;gap:1rem;margin:.3rem 0">' +
-      '<div style="font-size:4rem">' + emoji + '</div>' +
-      '<div style="flex:1"><div style="font-size:2.8rem;font-weight:800">' + Math.round(cx.temperature_2m) + '°</div>' +
-      '<div style="color:var(--muted);font-size:.85rem">体感 ' + Math.round(cx.apparent_temperature) + '° · ' + name + '</div></div>' +
+  if(!d || d.error) return '<div class="card"><div class="card-title">🌤️ 每日天气</div><div class="empty">天气数据加载中..</div><button class="btn btn-block secondary" id="weatherRetry">重试</button></div>';
+  if(!d.data) return '<div class="card"><div class="card-title">🌤️ 每日天气</div><div class="empty">' + (d.loading?'加载中..':'无法获取天气，<button class="btn btn-sm secondary" id="weatherRetry">重试</button>') + '</div></div>';
+
+  var cx = d.data.current;
+  var dy = d.data.daily;
+  var hr = d.data.hourly || {};
+  var code = cx.weather_code;
+  var emoji = WMO_CODES[code] || '☀️';
+  var name = WMO_NAMES[code] || '未知';
+  var todayMax = dy && dy.temperature_2m_max ? Math.round(dy.temperature_2m_max[0]) : Math.round(cx.temperature_2m+3);
+  var todayMin = dy && dy.temperature_2m_min ? Math.round(dy.temperature_2m_min[0]) : Math.round(cx.temperature_2m-3);
+  var aqi = d.aqi || {};
+  var aqiVal = (aqi.us_aqi==null) ? null : Math.round(aqi.us_aqi);
+  var aqiInfo = aqiLevel(aqiVal);
+  var uvVal = dy && dy.uv_index_max ? dy.uv_index_max[0] : null;
+  var uvInfo = uvLevel(uvVal);
+  var sunset = dy && dy.sunset ? dy.sunset[0] : null;
+  var sunrise = dy && dy.sunrise ? dy.sunrise[0] : null;
+
+  var sunsetPct = 0;
+  if(sunrise && sunset){
+    var now = Date.now();
+    var sr = new Date(sunrise).getTime();
+    var ss = new Date(sunset).getTime();
+    if(now >= sr && now <= ss) sunsetPct = (now - sr) / (ss - sr);
+    else if(now > ss) sunsetPct = 1;
+  }
+
+  var hourlyHTML = '';
+  if(hr.time && hr.temperature_2m){
+    var nowMs = Date.now();
+    var startIdx = -1;
+    for(var i=0;i<hr.time.length;i++){
+      if(new Date(hr.time[i]).getTime() >= nowMs){ startIdx = i; break; }
+    }
+    if(startIdx < 0) startIdx = 0;
+    var cells = [];
+    for(var j=0; j<10 && startIdx+j < hr.time.length; j++){
+      var k = startIdx + j;
+      var ht = hr.time[k];
+      var label = j===0 ? '现在' : (new Date(ht).getHours()+'时');
+      cells.push('<div class="wx-hour-cell">' +
+        '<div class="h">' + label + '</div>' +
+        '<div class="e">' + (WMO_CODES[hr.weather_code[k]] || '☀️') + '</div>' +
+        '<div class="t">' + Math.round(hr.temperature_2m[k]) + '°</div>' +
+      '</div>');
+    }
+    hourlyHTML = '<div class="wx-hourly">' + cells.join('') + '</div>';
+  }
+
+  var days = ['今天','明天','周三','周四','周五','周六','周日'];
+  var weekdayNames = ['日','一','二','三','四','五','六'];
+  var dayCells = [];
+  if(dy && dy.weather_code){
+    for(var i=0; i<5 && i<dy.weather_code.length; i++){
+      var dObj = new Date(); dObj.setDate(dObj.getDate()+i);
+      var dayName = i < 2 ? days[i] : weekdayNames[dObj.getDay()];
+      dayCells.push('<div class="wx-day-cell">' +
+        '<div class="d">' + dayName + '</div>' +
+        '<div class="e">' + (WMO_CODES[dy.weather_code[i]] || '☀️') + '</div>' +
+        '<div class="h">' + Math.round(dy.temperature_2m_max[i]) + '°</div>' +
+        '<div class="l">' + Math.round(dy.temperature_2m_min[i]) + '°</div>' +
+      '</div>');
+    }
+  }
+  var dayStrip = '<div class="wx-day-strip">' + dayCells.join('') + '</div>';
+
+  return '<div class="wx-wrap">' +
+    '<div class="wx-loc">' +
+      '<span>📍 ' + escapeHtml(d.city||'当前定位') + '</span>' +
+      '<span class="gear" id="weatherRetry" title="刷新">⚙️</span>' +
     '</div>' +
-    '<div style="display:flex;gap:.5rem;font-size:.78rem;color:var(--muted);margin:.3rem 0">' +
-      '<span>' + String.fromCharCode(128167) + ' ' + Math.round(cx.relative_humidity_2m) + '%</span>' +
-      '<span>' + String.fromCharCode(127788) + ' ' + Math.round(cx.wind_speed_10m) + ' km/h</span>' +
+    '<div class="wx-hero">' +
+      '<div class="wx-hero-ico">' + emoji + '</div>' +
+      '<div class="wx-hero-name">' + name + '</div>' +
     '</div>' +
-    (dy ? '<div style="margin-top:.5rem"><div class="pill">今明预报</div><div class="grid-2" style="margin-top:.4rem">' +
-      [0,1].map(function(i){
-        var ec = WMO_CODES[dy.weather_code[i]] || '☀️';
-        var day = i===0 ? '今天' : '明天';
-        return '<div style="text-align:center;padding:.3rem;background:var(--card-2);border-radius:10px">' +
-          '<div style="font-size:.78rem;color:var(--muted)">' + day + '</div>' +
-          '<div style="font-size:1.6rem">' + ec + '</div>' +
-          '<div><span style="font-weight:600">' + Math.round(dy.temperature_2m_max[i]) + '°</span> <span style="color:var(--muted);font-size:.78rem">' + Math.round(dy.temperature_2m_min[i]) + '°</span></div>' +
-          (dy.precipitation_probability_max ? '<div style="font-size:.72rem;color:#5ac8fa">' + String.fromCharCode(127784) + ' ' + dy.precipitation_probability_max[i] + '%</div>' : '') +
-        '</div>';
-      }).join('') +
-    '</div></div>' : '') +
-    '<div style="font-size:.68rem;color:var(--muted);margin-top:.4rem">数据来源 Open-Meteo·' + new Date().toLocaleTimeString('zh-CN') + '更新</div></div>';
+    '<div class="wx-main">' +
+      '<div class="wx-temp-circle">' +
+        '<div class="t">' + Math.round(cx.temperature_2m) + '°</div>' +
+        '<div class="hilo">H:' + todayMax + '°  L:' + todayMin + '°</div>' +
+      '</div>' +
+      '<div class="wx-side">' +
+        '<div class="wx-pill">' +
+          '<div class="lbl">空气质量</div>' +
+          '<div class="val">' + (aqiVal==null?'—':aqiVal) + '</div>' +
+          '<div class="sub">' + aqiInfo.txt + '</div>' +
+        '</div>' +
+        '<div class="wx-pill">' +
+          '<div class="lbl">紫外线指数</div>' +
+          '<div class="val">' + (uvVal==null?'—':Math.round(uvVal)) + '</div>' +
+          '<div class="sub">' + uvInfo.txt + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="wx-divider"></div>' +
+    hourlyHTML +
+    dayStrip +
+    '<div class="wx-grid">' +
+      '<div class="wx-metric">' +
+        '<div><div class="lbl">空气质量</div><div class="sub">' + aqiInfo.txt + '</div></div>' +
+        '<div class="wx-gauge">' + gaugeSVG(Math.min(aqiVal||0, 200), 200, '#22c55e') + '</div>' +
+        '<div class="vis"><div class="v">' + (aqiVal==null?'—':aqiVal) + '</div></div>' +
+      '</div>' +
+      '<div class="wx-metric">' +
+        '<div><div class="lbl">湿度</div><div class="sub">实时</div></div>' +
+        '<div class="wx-bcircle"><div class="v">' + Math.round(cx.relative_humidity_2m||0) + '%</div></div>' +
+      '</div>' +
+      '<div class="wx-metric">' +
+        '<div><div class="lbl">风速</div><div class="sub">' + compassArrow(cx.wind_direction_10m) + ' 风</div></div>' +
+        '<div class="wx-compass">' + compassSVG(cx.wind_direction_10m) + '</div>' +
+        '<div class="vis"><div class="v">' + Math.round(cx.wind_speed_10m||0) + '</div><div class="u">km/h</div></div>' +
+      '</div>' +
+      '<div class="wx-metric">' +
+        '<div><div class="lbl">紫外线指数</div><div class="sub">' + uvInfo.txt + '</div></div>' +
+        '<div class="wx-uv-stack">' + uvSVG(uvInfo.lv) + '</div>' +
+        '<div class="vis"><div class="v">' + (uvVal==null?'—':Math.round(uvVal)) + '</div></div>' +
+      '</div>' +
+      '<div class="wx-metric">' +
+        '<div><div class="lbl">日落</div><div class="sub">日出 ' + fmtHM(sunrise) + '</div></div>' +
+        '<div class="wx-sunset-gauge">' + sunsetSVG(sunsetPct) + '</div>' +
+        '<div class="vis"><div class="v">' + fmtHM(sunset) + '</div></div>' +
+      '</div>' +
+      '<div class="wx-metric">' +
+        '<div><div class="lbl">体感温度</div><div class="sub">实时</div></div>' +
+        '<div class="wx-bcircle"><div class="v">' + Math.round(cx.apparent_temperature||cx.temperature_2m) + '°</div><div class="u">体感</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:.65rem;color:rgba(0,0,0,.4);text-align:center;margin-top:.6rem">Open-Meteo · ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) + ' 更新</div>' +
+  '</div>';
 };
 initModule.weather = function(){
   var retry = document.getElementById('weatherRetry');
-  if(retry) retry.addEventListener('click', function(){ loadWeather(); });
+  if(retry) retry.addEventListener('click', function(){ loadWeather(true); });
 };
 var _weatherLoaded = false;
-function loadWeather(){
-  if(_weatherLoaded) return;
+function loadWeather(force){
+  if(_weatherLoaded && !force) return;
   _weatherLoaded = true;
-  if(state.weather && state.weather.data && state.weather.data.current) return;
+  if(state.weather && state.weather.data && state.weather.data.current && !force){
+    return;
+  }
   state.weather = state.weather || {};
   state.weather.city = state.weather.city || '北京';
   state.weather.loading = true;
   if(typeof renderContent === 'function') renderContent();
-  // Try geolocation, fallback to Beijing
   function doFetch(lat, lon, city){
-    fetchWeather(lat, lon).then(function(data){
+    Promise.all([
+      fetchWeather(lat, lon),
+      fetchAirQuality(lat, lon)
+    ]).then(function(results){
+      var data = results[0], aqi = results[1];
       if(data){
-        state.weather.data = data; state.weather.city = city; state.weather.loading = false; state.weather.error = false;
+        state.weather.data = data;
+        state.weather.aqi = aqi || state.weather.aqi || {};
+        state.weather.city = city;
+        state.weather.loading = false;
+        state.weather.error = false;
         state.weather.lastUpdate = Date.now();
+        if(typeof saveState === 'function') saveState();
       } else {
         state.weather.error = true;
       }
