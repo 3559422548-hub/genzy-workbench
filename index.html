@@ -921,11 +921,17 @@ function sourceLabel(src){
 }
 function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function openApp(scheme, fallback){
-  let left = false;
-  const onHide = ()=>{ left = true; };
-  document.addEventListener('visibilitychange', onHide, {once:true});
+  // 1) 先尝试用 URL Scheme 直接打开原生 App
   window.location.href = scheme;
-  setTimeout(()=>{ document.removeEventListener('visibilitychange', onHide); if(!left) window.open(fallback, '_blank', 'noopener'); }, 1200);
+  // 2) 若 1 秒后页面仍可见（说明 App 未安装/未接管），则兜底打开官网。
+  //    优先新标签页（保留工作台），被拦截时退回同标签跳转，避免弹窗拦截导致“无任何反应”。
+  setTimeout(() => {
+    if (document.visibilityState === 'visible') {
+      let w = null;
+      try { w = window.open(fallback, '_blank', 'noopener'); } catch (e) { w = null; }
+      if (!w) window.location.href = fallback;
+    }
+  }, 1000);
 }
 
 // ===== Shared Timer component =====
@@ -1144,50 +1150,58 @@ initModule.english = function(){
   // Recurrence tabs
   let currentRec = 'range';
   const recTabs = $$('#enRecTabs button');
+  const wdPicker = $$('#enWeekdayPicker button');
+  let selectedWd = new Set([0,1,2,3,4,5,6]);
+  const syncWdVisual = () => wdPicker.forEach(b => b.classList.toggle('active', selectedWd.has(parseInt(b.dataset.d))));
   recTabs.forEach(b=> b.addEventListener('click', ()=>{
     currentRec = b.dataset.rec;
     recTabs.forEach(x=> x.classList.toggle('active', x===b));
     $('#enWeekdayPicker').style.display = currentRec==='custom' ? 'flex' : 'none';
+    // 切换重复方式时重置星期选择，避免默认预选造成误解
+    if (currentRec === 'custom') selectedWd = new Set();
+    else if (currentRec === 'weekdays') selectedWd = new Set([1,2,3,4,5]);
+    else selectedWd = new Set([0,1,2,3,4,5,6]);
+    syncWdVisual();
   }));
 
   // Weekday picker (multi-select)
-  const wdPicker = $$('#enWeekdayPicker button');
-  const selectedWd = new Set([1,2,3,4,5]); // 默认选中工作日
   wdPicker.forEach(b=> b.addEventListener('click', ()=>{
     const d = parseInt(b.dataset.d);
     if (selectedWd.has(d)) selectedWd.delete(d); else selectedWd.add(d);
     b.classList.toggle('active', selectedWd.has(d));
   }));
-  // Init weekday picker visual state
-  wdPicker.forEach(b=>{
-    if (selectedWd.has(parseInt(b.dataset.d))) b.classList.add('active');
-  });
+  syncWdVisual();
 
   // Add plan
   $('#enAddPlan').addEventListener('click', ()=>{
-    const text = $('#enTaskText').value.trim();
-    const startDate = $('#enStartDate').value;
-    const endDate = $('#enEndDate').value;
-    const startTime = $('#enStartTime').value;
-    const endTime = $('#enEndTime').value;
-    if (!text) { toast('请输入任务内容'); return; }
-    if (!startDate || !endDate) { toast('请选择日期范围'); return; }
-    if (new Date(endDate) < new Date(startDate)) { toast('结束日期不能早于开始'); return; }
-    if (currentRec === 'custom' && selectedWd.size === 0) { toast('请至少选择一天'); return; }
+    try {
+      const text = $('#enTaskText').value.trim();
+      const startDate = $('#enStartDate').value;
+      const endDate = $('#enEndDate').value;
+      const startTime = $('#enStartTime').value;
+      const endTime = $('#enEndTime').value;
+      if (!text) { toast('请输入任务内容'); return; }
+      if (!startDate || !endDate) { toast('请选择日期范围'); return; }
+      if (new Date(endDate) < new Date(startDate)) { toast('结束日期不能早于开始日期'); return; }
+      if (currentRec === 'custom' && selectedWd.size === 0) { toast('请至少选择一天'); return; }
 
-    const plan = {
-      id: uid(),
-      text,
-      startDate, endDate,
-      startTime, endTime,
-      recurrence: currentRec,
-      weekdays: currentRec === 'custom' ? Array.from(selectedWd).sort() : (currentRec === 'weekdays' ? [1,2,3,4,5] : [0,1,2,3,4,5,6]),
-      generatedDates: []
-    };
-    state.english.tasks.push(plan);
-    const n = generateEnglishPlan(plan);
-    renderContent();
-    toast(`已添加：${n} 个每日任务`);
+      const plan = {
+        id: uid(),
+        text,
+        startDate, endDate,
+        startTime, endTime,
+        recurrence: currentRec,
+        weekdays: currentRec === 'custom' ? Array.from(selectedWd).sort() : (currentRec === 'weekdays' ? [1,2,3,4,5] : [0,1,2,3,4,5,6]),
+        generatedDates: []
+      };
+      state.english.tasks.push(plan);
+      const n = generateEnglishPlan(plan);
+      renderContent();
+      toast(`已添加：${n} 个每日任务`);
+    } catch (e) {
+      console.error('addPlan error', e);
+      toast('添加失败，请重试');
+    }
   });
 
   // Plan group click to expand
@@ -1841,7 +1855,7 @@ renderers.books = function(){
       <button class="btn btn-sm secondary" id="bookResetPrefs">重选偏好</button>
     </div>
     <div class="card-subtitle">根据你的偏好（${(prefs.genres||[]).map(g=>BOOK_GENRES.find(x=>x.id===g)?.label).filter(Boolean).join('、')} · ${BOOK_LEVELS.find(l=>l.id===prefs.level)?.label||''}），为你推荐：</div>
-    <div id="bookRecList"><div class="empty">📖 正在计算推荐...</div></div>
+    <div id="bookRecList"><div class="empty">🔎 正在为你预查可下载的 epub 版本...</div></div>
   </div>
   <div class="card">
     <div class="card-title"><span class="ttl">🔍 搜索图书</span></div>
@@ -1911,12 +1925,12 @@ initModule.books = async function(){
     if (recList) {
       // Use cached prefsList or compute
       if (state.books.prefsList && state.books.prefsList.genres && state.books.prefsList.genres.join() === prefs.genres.join() && state.books.prefsList.level === prefs.level) {
-        renderBookList(recList, state.books.prefsList.books);
+        await renderBookList(recList, state.books.prefsList.books);
       } else {
         const books = recommendBooks(prefs);
         state.books.prefsList = { genres: prefs.genres, level: prefs.level, books, at: Date.now() };
         saveState();
-        renderBookList(recList, books);
+        await renderBookList(recList, books);
       }
     }
   }
@@ -1932,19 +1946,7 @@ initModule.books = async function(){
       resultDiv.innerHTML = '<div class="empty">未找到相关书籍，试试其他关键词</div>';
       return;
     }
-    // Check if results are from curated list (objects with just title/author) or Open Library
-    const isOl = results[0].olKey !== undefined;
-    resultDiv.innerHTML = results.map(b => `
-      <div class="book-item">
-        <div style="flex:1">
-          <div style="font-weight:700">${escapeHtml(b.title)}</div>
-          <div style="font-size:.8rem;color:var(--muted)">${escapeHtml(b.author)}${b.year ? ' · '+b.year : ''}</div>
-          ${b.olKey ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">来自 Open Library</div>` : `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">中文推荐</div>`}
-        </div>
-        <div>
-          <button class="btn btn-sm bookDlBtn" data-title="${escapeHtml(b.title)}" data-author="${escapeHtml(b.author||'')}">🔍 找下载</button>
-        </div>
-      </div>`).join('');
+    await renderBookList(resultDiv, results);
   });
   if ($('#bookSearchInput')) $('#bookSearchInput').addEventListener('keydown', e=>{
     if (e.key === 'Enter') $('#bookSearchBtn').click();
@@ -1961,56 +1963,46 @@ initModule.books = async function(){
   }));
   initTimer('book');
 };
-function renderBookList(container, books){
+async function renderBookList(container, books){
   if (!books || !books.length) { container.innerHTML = '<div class="empty">暂无推荐，试试其他偏好</div>'; return; }
-  const cache = state.books.downloadCache || {};
-  container.innerHTML = books.map((b, i) => {
-    const cached = cache[b.title + b.author];
-    const btnHtml = cached
-      ? `<a class="btn btn-sm success" href="${escapeHtml(cached)}" target="_blank" rel="noopener">⬇️ 下载 epub</a>`
-      : `<button class="btn btn-sm bookDlBtn" data-title="${escapeHtml(b.title)}" data-author="${escapeHtml(b.author)}">🔍 找下载</button>`;
+  // 先为每本书批量预查 epub 下载直链，再统一展示推荐
+  container.innerHTML = '<div class="empty">🔎 正在为每本书预查 epub 下载链接...</div>';
+  await Promise.all(books.map(async b => {
+    b.dlUrl = await fetchBookDownload(b.title, b.author || '');
+  }));
+  if (!document.body.contains(container)) return; // 容器已被替换，避免写入过期内容
+  const direct = books.filter(b => b.dlUrl).length;
+  container.innerHTML = books.map(b => {
+    const btn = b.dlUrl
+      ? `<a class="btn btn-sm success" href="${escapeHtml(b.dlUrl)}" target="_blank" rel="noopener">⬇️ 下载 epub</a>`
+      : `<button class="btn btn-sm secondary bookSearchBtn" data-title="${escapeHtml(b.title)}">📖 搜索其他版本</button>`;
+    const meta = b.desc
+      ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">💡 ${escapeHtml(b.desc)}</div>`
+      : (b.olKey ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">来自 Open Library</div>` : `<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">中文推荐</div>`);
     return `
     <div class="book-item">
       <div style="flex:1">
         <div style="font-weight:700">${escapeHtml(b.title)}</div>
-        <div style="font-size:.8rem;color:var(--muted)">${escapeHtml(b.author)}</div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">💡 ${escapeHtml(b.desc || '经典好书推荐')}</div>
+        <div style="font-size:.8rem;color:var(--muted)">${escapeHtml(b.author)}${b.year ? ' · '+b.year : ''}</div>
+        ${meta}
       </div>
-      <div>${btnHtml}</div>
+      <div>${btn}</div>
     </div>`;
-  }).join('');
-  // Init download buttons
-  $$('.bookDlBtn').forEach(btn => {
-    btn.addEventListener('click', async ()=>{
-      const title = btn.dataset.title;
-      const author = btn.dataset.author;
-      btn.textContent = '🔎 查找中...';
-      btn.disabled = true;
-      const url = await fetchBookDownload(title, author);
-      if (url) {
-        // Cache and update
-        state.books.downloadCache = state.books.downloadCache || {};
-        state.books.downloadCache[title + author] = url;
-        saveState();
-        btn.outerHTML = `<a class="btn btn-sm success" href="${escapeHtml(url)}" target="_blank" rel="noopener">⬇️ 下载 epub</a>`;
-        // Auto click
-        setTimeout(() => {
-          const newBtn = container.querySelector('.btn.success:last-child');
-          if (newBtn) window.open(url, '_blank', 'noopener');
-        }, 100);
-      } else {
-        btn.textContent = '📖 搜索其他版本';
-        btn.disabled = false;
-        btn.className = 'btn btn-sm secondary';
-        btn.onclick = () => window.open(`https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(title)}`, '_blank', 'noopener');
-      }
-    });
+  }).join('')
+  + (direct < books.length ? `<div class="card-subtitle" style="margin-top:.5rem">已为 ${direct}/${books.length} 本书找到可直接下载的 epub，其余可点「搜索其他版本」查找。</div>` : '');
+  $$('.bookSearchBtn', container).forEach(btn => {
+    btn.addEventListener('click', () => window.open(`https://www.gutenberg.org/ebooks/search/?query=${encodeURIComponent(btn.dataset.title)}`, '_blank', 'noopener'));
   });
 }
+function dlKey(title, author){
+  return `dl_${title}_${author||''}`.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_').slice(0,80);
+}
 async function fetchBookDownload(title, author){
-  const key = `dl_${title}_${author}`.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_').slice(0,80);
+  const key = dlKey(title, author);
+  const cache = state.books.downloadCache = state.books.downloadCache || {};
   // Check cache first
-  if (state.books.downloadCache && state.books.downloadCache[key]) return state.books.downloadCache[key];
+  if (cache[key]) return cache[key];
+  let url = null;
   // Search Gutendex
   try {
     const res = await fetch(`https://gutendex.com/books/?search=${encodeURIComponent(title)}`);
@@ -2025,10 +2017,7 @@ async function fetchBookDownload(title, author){
       if (a) match = results.find(b => b.title.toLowerCase().includes(a.toLowerCase()));
     }
     if (!match && results.length) match = results[0];
-    if (match) {
-      const url = `https://www.gutenberg.org/ebooks/${match.id}.epub.images`;
-      return url;
-    }
+    if (match) url = `https://www.gutenberg.org/ebooks/${match.id}.epub.images`;
   } catch(e) { /* fallback */ }
   // Try Open Library
   try {
@@ -2037,13 +2026,11 @@ async function fetchBookDownload(title, author){
     const data = await res.json();
     if (data.docs && data.docs.length) {
       const d = data.docs[0];
-      if (d.ia && d.ia.length) {
-        const url = `https://archive.org/details/${d.ia[0]}`;
-        return url;
-      }
+      if (d.ia && d.ia.length) url = `https://archive.org/details/${d.ia[0]}`;
     }
   } catch(e) { /* fallback */ }
-  return null;
+  if (url) { cache[key] = url; saveState(); }
+  return url;
 }
 
 // ===== Timers / Day Matter =====
