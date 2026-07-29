@@ -1042,64 +1042,6 @@ function removeEnglishPlan(planId){
   state.english.tasks = state.english.tasks.filter(x=>x.id!==planId);
   saveState();
 }
-// simpleMarkdown and renderEchoReadme — to be inserted into index.html
-
-function simpleMarkdown(txt){
-  txt = escapeHtml(txt);
-  // code blocks
-  txt = txt.replace(/```\w*\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-  // inline code
-  txt = txt.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // bold
-  txt = txt.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  // italic
-  txt = txt.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  // links
-  txt = txt.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-  // headers
-  txt = txt.replace(/^### (.+)$/gm, '<h4>$1</h4>');
-  txt = txt.replace(/^## (.+)$/gm, '<h3>$1</h3>');
-  txt = txt.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-  // list items
-  txt = txt.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
-  txt = txt.replace(/(<li>[\s\S]*?<\/li>)\n(?!<li>)/g, '<ul>$1</ul>\n');
-  // paragraphs
-  return txt.split(/\n{2,}/).map(function(p){
-    p = p.trim();
-    if (!p) return '';
-    if (/^<(?:p|h[2-4]|ul|pre|hr|blockquote)/i.test(p)) return p;
-    return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
-  }).join('\n');
-}
-
-async function renderEchoReadme(){
-  var container = $('#echoReadmeContent');
-  if (!container) return;
-  if (state.english.echoReadmeHtml) {
-    container.innerHTML = state.english.echoReadmeHtml;
-    return;
-  }
-  try {
-    container.innerHTML = '<div class="empty">' + String.fromCharCode(9200) + ' 加载中...</div>';
-    var res = await fetch('https://api.github.com/repos/echo-loop/Echo-Loop/readme');
-    if (!res.ok) throw new Error('fetch fail');
-    var data = await res.json();
-    if (data.content && data.encoding === 'base64') {
-      state.english.echoReadmeHtml = simpleMarkdown(atob(data.content));
-      saveState();
-      container.innerHTML = state.english.echoReadmeHtml;
-    } else {
-      throw new Error('unexpected format');
-    }
-  } catch (e) {
-    container.innerHTML = '<div class="empty" style="padding:.8rem 0">' +
-      '加载失败 <a href="https://github.com/echo-loop/Echo-Loop" target="_blank" rel="noopener">' +
-      '在 GitHub 查看仓库 ' + String.fromCharCode(8599) + '</a></div>';
-  }
-}
-
-
-
 renderers.english = function(){
   // Migrate on first render
   if (state.english.tasks && state.english.tasks.length && !state.english.tasks[0].recurrence) {
@@ -1193,7 +1135,51 @@ renderers.english = function(){
   </div>`;
 
   
-  const echoRepoCard = '<div class="card">\n    <div class="card-title"><span class="ttl">' + String.fromCharCode(128218) + ' Echo Loop 项目文档</span></div>\n    <div class="card-subtitle"><a href="https://github.com/echo-loop/Echo-Loop" target="_blank" rel="noopener">github.com/echo-loop/Echo-Loop</a></div>\n    <div id="echoReadmeContent" style="max-height:18rem;overflow-y:auto;font-size:.82rem;line-height:1.5;padding:.3rem 0">\n      <div class="empty">' + String.fromCharCode(128214) + ' 加载 Echo Loop 项目文档...</div>\n    </div>\n  </div>';
+  const echoRepoCard = `  <div class="card">
+    <div class="grid-2" style="gap:.7rem">
+      <div class="card card-dark app-launch" onclick="window.open('https://apps.apple.com/app/id6760324074','_blank','noopener')">
+        <div class="icon">🗣️</div>
+        <div class="name">Echo Loop</div>
+        <div class="sub" style="font-size:.7rem">iOS / Android</div>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:.2rem;font-size:.8rem;line-height:1.4;color:var(--muted)">
+        <div style="font-weight:600;color:var(--text);font-size:.95rem">科学英语听说训练</div>
+        <div>由语言学教授指导设计</div>
+        <div><span class="pill accent">AGPL-3.0</span> <span class="pill">11k+ ⭐</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ttl">🎯 学习方法论</span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.3rem 0">
+      <div class="pill" style="flex:1;text-align:center;padding:.5rem">👂 盲听</div>
+      <div class="pill" style="flex:1;text-align:center;padding:.5rem">🔍 精听</div>
+      <div class="pill" style="flex:1;text-align:center;padding:.5rem">🗣️ 跟读</div>
+      <div class="pill" style="flex:1;text-align:center;padding:.5rem">📢 复述</div>
+      <div class="pill" style="flex:1;text-align:center;padding:.5rem">🔄 间隔复习</div>
+      <div class="pill" style="flex:1;text-align:center;padding:.5rem">✅ 通关</div>
+    </div>
+    <div class="card-subtitle" style="margin-top:.3rem">盲听→精听→跟读→复述→间隔复习，共 8 轮学习（首次 + 7 轮复习），间隔从 6 小时到 28 天，自动驱动无需自己决策。</div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ttl">✨ 核心功能</span></div>
+    <div class="grid-2" style="gap:.5rem;font-size:.8rem;line-height:1.3;margin-top:.2rem">
+      <div class="card card-2" style="padding:.5rem"><div style="font-weight:600">🤖 自动驱动</div><div style="color:var(--muted);font-size:.75rem">跟读遍数、复习时机自动推进</div></div>
+      <div class="card card-2" style="padding:.5rem"><div style="font-weight:600">🎯 听说闭环</div><div style="color:var(--muted);font-size:.75rem">精听→跟读→复述一气呵成</div></div>
+      <div class="card card-2" style="padding:.5rem"><div style="font-weight:600">🧩 意群划分</div><div style="color:var(--muted);font-size:.75rem">长难句拆开，降低听懂难度</div></div>
+      <div class="card card-2" style="padding:.5rem"><div style="font-weight:600">⭐ 难句收藏</div><div style="color:var(--muted);font-size:.75rem">自动归档，集中反复重练</div></div>
+      <div class="card card-2" style="padding:.5rem"><div style="font-weight:600">💡 AI 讲解</div><div style="color:var(--muted);font-size:.75rem">翻译/解析/词汇按需展开</div></div>
+      <div class="card card-2" style="padding:.5rem"><div style="font-weight:600">🎙️ 跟读评测</div><div style="color:var(--muted);font-size:.75rem">识别对齐，高亮命中词给出评级</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ttl">📥 下载 Echo Loop</span></div>
+    <div class="grid-2">
+      <a class="btn btn-block" href="https://apps.apple.com/app/id6760324074" target="_blank" rel="noopener" style="margin-bottom:.3rem">📱 App Store</a>
+      <a class="btn btn-block secondary" href="https://github.com/echo-loop/Echo-Loop/releases" target="_blank" rel="noopener" style="margin-bottom:.3rem">📦 GitHub Release</a>
+    </div>
+    <div class="card-subtitle" style="margin-top:.3rem;text-align:center"><a href="https://github.com/echo-loop/Echo-Loop" target="_blank" rel="noopener">🔗 查看完整源代码</a></div>
+  </div>`;
 return launchCard + echoRepoCard + formCard + plansCard;
 };
 initModule.english = function(){
@@ -1206,7 +1192,6 @@ initModule.english = function(){
   // App launcher
   const echoCard = $('#enOpenEcho');
   if (echoCard) echoCard.addEventListener('click', ()=> openApp('echoloop://', 'https://www.echo-loop.top/zh-CN'));
-  renderEchoReadme();
   const duoCard = $('#enOpenDuolingo');
   if (duoCard) duoCard.addEventListener('click', ()=> openApp('duolingo://', 'https://www.duolingo.com'));
 
