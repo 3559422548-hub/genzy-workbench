@@ -1775,19 +1775,16 @@ const BOOK_LEVELS = [
   {id:'deep', label:'🎯 经典深度', desc:'大部头/有挑战，值得品味'}
 ];
 function recommendBooks(prefs){
-  if (!prefs || !prefs.genre) return CHINESE_BOOKS.slice(0,6);
+  if (!prefs || !prefs.genres || !prefs.genres.length) return CHINESE_BOOKS.slice(0,6);
+  const genres = prefs.genres;
   let candidates = CHINESE_BOOKS.filter(b => {
-    let match = false;
-    // Genre
-    if (prefs.genre === 'all' || b.genre === prefs.genre) match = true;
-    // Level filter (optional)
-    if (match && prefs.level && prefs.level !== 'all' && b.level !== prefs.level) match = false;
-    return match;
+    if (!genres.includes(b.genre)) return false;
+    if (prefs.level && prefs.level !== 'all' && b.level !== prefs.level) return false;
+    return true;
   });
-  if (candidates.length < 4) candidates = CHINESE_BOOKS.filter(b => b.genre === prefs.genre);
+  if (candidates.length < 4) candidates = CHINESE_BOOKS.filter(b => genres.includes(b.genre));
   if (candidates.length < 4) candidates = CHINESE_BOOKS;
-  // Shuffle deterministically based on prefs
-  const seed = prefs.genre ? prefs.genre.length * 7 : 42;
+  const seed = genres.join('').length * 7 + 42;
   return candidates.sort((a,b) => (a.title.charCodeAt(0) * seed) % 3 - (b.title.charCodeAt(0) * seed) % 3).slice(0,8);
 }
 async function searchBooks(query){
@@ -1816,14 +1813,14 @@ renderers.books = function(){
   const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
   if (!isMobile) return `<div class="card"><div class="card-title">📚 书香书屋</div><div class="empty">此模块仅在手机浏览器展示，请用手机访问。</div></div>`;
   const prefs = state.books.prefs || {};
-  const hasPrefs = prefs.genre ? true : false;
+  const hasPrefs = prefs.genres && prefs.genres.length > 0;
   // Quiz HTML
   const quizHtml = hasPrefs ? '' : `
   <div class="card">
     <div class="card-title"><span class="ttl">📝 读书偏好问卷</span></div>
     <div class="card-subtitle">回答几个问题，帮你推荐更适合的书籍</div>
     <div class="form-group">
-      <label>你喜欢的书籍类型？</label>
+      <label>你喜欢的书籍类型？（可多选）</label>
       <div class="segment" id="bookGenreSeg" style="flex-wrap:wrap">
         ${BOOK_GENRES.map(g=>`<button data-val="${g.id}">${g.label}</button>`).join('')}
       </div>
@@ -1843,7 +1840,7 @@ renderers.books = function(){
       <span class="ttl">📚 推荐书目</span>
       <button class="btn btn-sm secondary" id="bookResetPrefs">重选偏好</button>
     </div>
-    <div class="card-subtitle">根据你的偏好（${BOOK_GENRES.find(g=>g.id===prefs.genre)?.label||''} · ${BOOK_LEVELS.find(l=>l.id===prefs.level)?.label||''}），为你推荐：</div>
+    <div class="card-subtitle">根据你的偏好（${(prefs.genres||[]).map(g=>BOOK_GENRES.find(x=>x.id===g)?.label).filter(Boolean).join('、')} · ${BOOK_LEVELS.find(l=>l.id===prefs.level)?.label||''}），为你推荐：</div>
     <div id="bookRecList"><div class="empty">📖 正在计算推荐...</div></div>
   </div>
   <div class="card">
@@ -1882,20 +1879,23 @@ initModule.books = async function(){
     const seg = $('#bookGenreSeg');
     const levelSeg = $('#bookLevelSeg');
     if (!seg) return;
-    const selected = seg.querySelector('.active');
+    const selected = seg.querySelectorAll('.active');
     const selectedLevel = levelSeg ? levelSeg.querySelector('.active') : null;
-    if (!selected) { toast('请选择书籍类型'); return; }
-    state.books.prefs = { genre: selected.dataset.val, level: selectedLevel ? selectedLevel.dataset.val : 'medium', setAt: Date.now() };
+    if (!selected || selected.length === 0) { toast('请至少选择一种书籍类型'); return; }
+    state.books.prefs = {
+      genres: Array.from(selected).map(b => b.dataset.val),
+      level: selectedLevel ? selectedLevel.dataset.val : 'medium',
+      setAt: Date.now()
+    };
     if (state.books.prefsList) delete state.books.prefsList;
     saveState(); renderContent(); toast('偏好已保存');
   };
   if ($('#bookSavePrefs')) $('#bookSavePrefs').addEventListener('click', saveQuiz);
-  // Genre segment
+  // Genre segment — multi-select (toggle)
   $$('#bookGenreSeg button').forEach(b => b.addEventListener('click', ()=>{
-    $$('#bookGenreSeg button').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
+    b.classList.toggle('active');
   }));
-  // Level segment
+  // Level segment — single select
   $$('#bookLevelSeg button').forEach(b => b.addEventListener('click', ()=>{
     $$('#bookLevelSeg button').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
@@ -1906,15 +1906,15 @@ initModule.books = async function(){
   });
 
   // === Recommendations ===
-  if (prefs.genre) {
+  if (prefs.genres && prefs.genres.length) {
     const recList = $('#bookRecList');
     if (recList) {
       // Use cached prefsList or compute
-      if (state.books.prefsList && state.books.prefsList.genre === prefs.genre) {
+      if (state.books.prefsList && state.books.prefsList.genres && state.books.prefsList.genres.join() === prefs.genres.join() && state.books.prefsList.level === prefs.level) {
         renderBookList(recList, state.books.prefsList.books);
       } else {
         const books = recommendBooks(prefs);
-        state.books.prefsList = { genre: prefs.genre, level: prefs.level, books, at: Date.now() };
+        state.books.prefsList = { genres: prefs.genres, level: prefs.level, books, at: Date.now() };
         saveState();
         renderBookList(recList, books);
       }
