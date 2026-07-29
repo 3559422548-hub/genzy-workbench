@@ -1432,15 +1432,15 @@ renderers.english = function(){
 
 
   const vocabWord = getCurrentVocab();
-  var vocabCard = '<div class="card" style="background:#e8f5e9;padding:1rem;border-radius:18px">' +
+  var vocabCard = '<div class="card" id="vocabCard" style="background:#e8f5e9;padding:1rem;border-radius:18px;cursor:pointer" data-word="' + escapeHtml(vocabWord.w) + '">' +
     '<div style="background:#fff;border-radius:14px;padding:1rem;box-shadow:0 2px 12px rgba(0,0,0,.08)">' +
       '<div style="font-size:1.8rem;font-weight:800;color:#1a73e8;line-height:1.2">' + escapeHtml(vocabWord.w) + '</div>' +
       '<div style="font-size:1rem;color:#64b5f6;margin-top:.15rem">' + escapeHtml(vocabWord.ph) + '</div>' +
       '<div style="font-size:.9rem;color:#222;margin-top:.5rem;line-height:1.4">' + escapeHtml(vocabWord.t) + '</div>' +
       (vocabWord.e ? '<div style="font-size:.8rem;color:#666;margin-top:.5rem;line-height:1.5;padding-top:.5rem;border-top:1px solid #eee">' + escapeHtml(vocabWord.e).replace(new RegExp(escapeHtml(vocabWord.w),'gi'),'<span style="color:#1a73e8;font-weight:700">$&</span>') + '</div>' : '') +
-      '<button class="btn btn-sm secondary" id="speakWordBtn" style="margin-top:.6rem;width:100%">' + String.fromCharCode(128266) + ' 听发音</button>' +
+      '<button class="btn btn-sm secondary" id="speakWordBtn" style="margin-top:.6rem;width:100%" onclick="event.stopPropagation()">' + String.fromCharCode(128266) + ' 听发音</button>' +
+      '<div style="font-size:.68rem;color:#888;margin-top:.4rem;text-align:center">点击卡片在「不背单词」中搜索 · 每小时自动更新 · 今日第 ' + (new Date().getHours()+1) + ' 张卡片</div>' +
     '</div>' +
-    '<div style="font-size:.68rem;color:#888;margin-top:.4rem;text-align:center">每小时自动更新 · 今日第 ' + (new Date().getHours()+1) + ' 张卡片</div>' +
   '</div>';
   return launchCard + vocabCard + formCard + plansCard;;
 };
@@ -1458,6 +1458,12 @@ initModule.english = function(){
   // Flashcard speak
   var speakBtn = document.getElementById('speakWordBtn');
   if(speakBtn) speakBtn.addEventListener('click', function(){ speakWord(getCurrentVocab().w); });
+  // Vocab card -> 不背单词
+  var vocabCard = document.getElementById('vocabCard');
+  if(vocabCard) vocabCard.addEventListener('click', function(){
+    var word = vocabCard.dataset.word;
+    if(word) openApp('bubeiword://search?word=' + encodeURIComponent(word), 'https://apps.apple.com/cn/app/id698570469');
+  });
   // Auto-refresh flashcard every hour
   var nextHourMs = (60 - new Date().getMinutes()) * 60 * 1000;
   if(typeof _autoRefreshTimer !== 'undefined') clearTimeout(_autoRefreshTimer);
@@ -2306,7 +2312,7 @@ renderers.news = function(){
 initModule.news = function(){
   var btn = document.getElementById('idailyOpenBtn');
   if(btn) btn.addEventListener('click', function(){
-    openApp('idaily://', 'https://apps.apple.com/cn/app/idaily-%E6%AF%8F%E6%97%A5%E7%8E%AF%E7%90%83%E8%A7%86%E9%87%8E/id488528128');
+    openApp('shortcuts://run-shortcut?name=iDaily', 'https://apps.apple.com/cn/app/idaily-%E6%AF%8F%E6%97%A5%E7%8E%AF%E7%90%83%E8%A7%86%E9%87%8E/id488528128');
   });
 };
 
