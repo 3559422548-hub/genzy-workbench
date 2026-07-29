@@ -612,6 +612,7 @@ function loadState(){
     homework: Storage.get('homework', {images:[], tasks:[]}),
     music: Storage.get('music', {planProgress:{}, qaHistory:[], analyses:[]}),
     books: Storage.get('books', {tasks:[], timer:{}}),
+    kitchen: Storage.get('kitchen', {}),
     timers: Storage.get('timers', {events:[], stopwatch:{running:false,startTime:null,elapsed:0}, countdown:{target:null,running:false}})
   };
   if (!state.daily.tasks) state.daily.tasks = {};
@@ -651,6 +652,7 @@ const MODULES = [
   {id:'bills', label:'消费记账', icon:'💰'},
   {id:'homework', label:'作业完成', icon:'📝'},
   {id:'music', label:'编曲学习', icon:'🎹'},
+  {id:'kitchen', label:'饭香厨房', icon:'🍳'},
   {id:'books', label:'书香书屋', icon:'📚'},
   {id:'timers', label:'计时记日', icon:'⏱️'}
 ];
@@ -1040,6 +1042,64 @@ function removeEnglishPlan(planId){
   state.english.tasks = state.english.tasks.filter(x=>x.id!==planId);
   saveState();
 }
+// simpleMarkdown and renderEchoReadme — to be inserted into index.html
+
+function simpleMarkdown(txt){
+  txt = escapeHtml(txt);
+  // code blocks
+  txt = txt.replace(/```\w*\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  // inline code
+  txt = txt.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // bold
+  txt = txt.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // italic
+  txt = txt.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // links
+  txt = txt.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // headers
+  txt = txt.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  txt = txt.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+  txt = txt.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+  // list items
+  txt = txt.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+  txt = txt.replace(/(<li>[\s\S]*?<\/li>)\n(?!<li>)/g, '<ul>$1</ul>\n');
+  // paragraphs
+  return txt.split(/\n{2,}/).map(function(p){
+    p = p.trim();
+    if (!p) return '';
+    if (/^<(?:p|h[2-4]|ul|pre|hr|blockquote)/i.test(p)) return p;
+    return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+  }).join('\n');
+}
+
+async function renderEchoReadme(){
+  var container = $('#echoReadmeContent');
+  if (!container) return;
+  if (state.english.echoReadmeHtml) {
+    container.innerHTML = state.english.echoReadmeHtml;
+    return;
+  }
+  try {
+    container.innerHTML = '<div class="empty">' + String.fromCharCode(9200) + ' 加载中...</div>';
+    var res = await fetch('https://api.github.com/repos/echo-loop/Echo-Loop/readme');
+    if (!res.ok) throw new Error('fetch fail');
+    var data = await res.json();
+    if (data.content && data.encoding === 'base64') {
+      state.english.echoReadmeHtml = simpleMarkdown(atob(data.content));
+      saveState();
+      container.innerHTML = state.english.echoReadmeHtml;
+    } else {
+      throw new Error('unexpected format');
+    }
+  } catch (e) {
+    container.innerHTML = '<div class="empty" style="padding:.8rem 0">' +
+      '加载失败 <a href="https://github.com/echo-loop/Echo-Loop" target="_blank" rel="noopener">' +
+      '在 GitHub 查看仓库 ' + String.fromCharCode(8599) + '</a></div>';
+  }
+}
+
+
+
 renderers.english = function(){
   // Migrate on first render
   if (state.english.tasks && state.english.tasks.length && !state.english.tasks[0].recurrence) {
@@ -1132,7 +1192,9 @@ renderers.english = function(){
     }).join('') : '<div class="empty"><div class="ico">📖</div>还没有学习计划，添加一个吧</div>'}
   </div>`;
 
-  return launchCard + formCard + plansCard;
+  
+  const echoRepoCard = '<div class="card">\n    <div class="card-title"><span class="ttl">' + String.fromCharCode(128218) + ' Echo Loop 项目文档</span></div>\n    <div class="card-subtitle"><a href="https://github.com/echo-loop/Echo-Loop" target="_blank" rel="noopener">github.com/echo-loop/Echo-Loop</a></div>\n    <div id="echoReadmeContent" style="max-height:18rem;overflow-y:auto;font-size:.82rem;line-height:1.5;padding:.3rem 0">\n      <div class="empty">' + String.fromCharCode(128214) + ' 加载 Echo Loop 项目文档...</div>\n    </div>\n  </div>';
+return launchCard + echoRepoCard + formCard + plansCard;
 };
 initModule.english = function(){
   // Migration on entry (idempotent)
@@ -1144,6 +1206,7 @@ initModule.english = function(){
   // App launcher
   const echoCard = $('#enOpenEcho');
   if (echoCard) echoCard.addEventListener('click', ()=> openApp('echoloop://', 'https://www.echo-loop.top/zh-CN'));
+  renderEchoReadme();
   const duoCard = $('#enOpenDuolingo');
   if (duoCard) duoCard.addEventListener('click', ()=> openApp('duolingo://', 'https://www.duolingo.com'));
 
@@ -2040,6 +2103,30 @@ initModule.timers = function(){
   });
   $$('.tmDelEvent').forEach(b=> b.addEventListener('click', ()=>{ state.timers.events=state.timers.events.filter(e=>e.id!==b.dataset.id); saveState(); renderContent(); }));
   setFlipClock('main', 0);
+};
+
+
+
+// ===== Kitchen (Cooking) =====
+renderers.kitchen = function(){
+  var isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth<768;
+  return `<div class="card">
+    <div class="card-title"><span class="ttl">🍳 饭香厨房</span></div>
+    <div class="card-subtitle">菜谱来自 <a href="https://github.com/YunYouJun/cook" target="_blank" rel="noopener">🔗 YunYouJun/cook</a></div>
+  </div>
+  <div style="background:#fff;border-radius:var(--radius,18px);overflow:hidden;margin-top:.5rem;position:relative;min-height:70vh">
+    <iframe src="${isMobile ? 'https://cook.yunle.fun' : 'https://cook.yunyoujun.cn'}" style="width:100%;height:75vh;border:none;display:block" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" loading="lazy" title="饭香菜谱"></iframe>
+  </div>
+  <div class="card" style="margin-top:.5rem">
+    <button class="btn btn-secondary btn-block" id="openKitchenTab">🔗 在新标签页打开</button>
+    <div class="card-subtitle" style="margin-top:.5rem;text-align:center">如果加载异常，请点击上方按钮在新标签页访问。</div>
+  </div>`;
+};
+initModule.kitchen = function(){
+  var btn = document.getElementById('openKitchenTab');
+  if (btn) btn.addEventListener('click', function(){
+    window.open('https://cook.yunyoujun.cn', '_blank', 'noopener');
+  });
 };
 
 // ===== Boot =====
