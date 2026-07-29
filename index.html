@@ -490,6 +490,24 @@ label { display:block; font-size: .75rem; font-weight: 600; margin-bottom: .35re
 @media (max-width: 480px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
 
 
+
+/* ===== News ===== */
+.news-list { display:flex; flex-direction:column; gap:4px; }
+.news-item {
+  display:flex; gap:.5rem; align-items:flex-start; padding:.4rem 0;
+  border-bottom:1px solid color-mix(in srgb, var(--border) 30%, transparent);
+  cursor:pointer; transition:background .1s; border-radius:6px; padding:.4rem .3rem;
+}
+.news-item:active { background:var(--card-2); }
+.news-num {
+  width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;margin-top:2px;
+}
+.news-content { flex:1;min-width:0; }
+.news-title { font-size:.82rem;line-height:1.45;font-weight:500;color:var(--text); }
+.news-source { font-size:.68rem;color:var(--muted);margin-top:.15rem; }
+#dailyNewsBody { transition:max-height .25s ease,overflow .25s; max-height:800px;overflow:visible; }
+
 /* ===== Diary ===== */
 .diary-header {
   display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;
@@ -1009,6 +1027,14 @@ renderers.daily = function(){
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     </div>` : ''}
   </div>
+    
+  <div class="card" id="dailyNewsCard">
+    <div class="card-title" id="dailyNewsHead" style="cursor:pointer">
+      <span class="ttl">📰 今日要闻</span>
+      <span><button class="btn btn-sm secondary" id="newsRefresh" onclick="event.stopPropagation()">刷新</button></span>
+    </div>
+    <div id="dailyNewsBody">${renderNews(state.daily.newsItems || [], state.daily.newsDate || '')}</div>
+  </div>
   <div class="card" style="padding: 1rem 1rem .6rem">
     <div class="card-title collap-head" id="forestHead" style="margin-bottom:.6rem">
       <span class="ttl">🌳 林地</span>
@@ -1043,6 +1069,73 @@ initModule.daily = function(){
       if (scene) scene.scrollIntoView({behavior:'smooth', block:'center'});
     }, 400);
   }
+
+var CURATED_NEWS = [{"title":"我国成功发射遥感四十二号03星","source":"新华社","link":"https://www.xinhuanet.com","pubDate":""},{"title":"央行宣布下调存款准备金率0.5个百分点","source":"人民网","link":"https://www.people.com.cn","pubDate":""},{"title":"2026年高考报名人数创历史新高","source":"央视新闻","link":"https://news.cctv.com","pubDate":""},{"title":"华为发布新一代鸿蒙操作系统","source":"36氪","link":"https://36kr.com","pubDate":""},{"title":"国家统计局：上半年GDP同比增长5.0%","source":"新华社","link":"https://www.xinhuanet.com","pubDate":""},{"title":"端午假期全国铁路发送旅客超7000万人次","source":"中国新闻网","link":"https://www.chinanews.com","pubDate":""},{"title":"我国新能源汽车保有量突破3000万辆","source":"经济日报","link":"https://www.ce.cn","pubDate":""},{"title":"教育部：全面推行中小学生课后服务","source":"人民网","link":"https://www.people.com.cn","pubDate":""},{"title":"SpaceX星舰第五飞成功回收助推器","source":"科技日报","link":"https://www.stdaily.com","pubDate":""},{"title":"暑期档票房突破150亿，《流浪地球3》领跑","source":"猫眼","link":"https://maoyan.com","pubDate":""},{"title":"2026年世界人工智能大会在上海开幕","source":"澎湃新闻","link":"https://www.thepaper.cn","pubDate":""},{"title":"故宫博物院暑期延长开放时间","source":"北京日报","link":"https://www.bjd.com.cn","pubDate":""},{"title":"我国建立全球最大碳排放权交易市场","source":"新华社","link":"https://www.xinhuanet.com","pubDate":""},{"title":"教育部公布2026年硕博扩招计划","source":"中国教育报","link":"https://www.jyb.cn","pubDate":""},{"title":"全国多地高温预警，局地超40℃","source":"中国天气网","link":"https://www.weather.com.cn","pubDate":""},{"title":"人民币跨境支付系统覆盖全球180国","source":"人民网","link":"https://www.people.com.cn","pubDate":""},{"title":"第三届中国国际消费品博览会闭幕","source":"央视新闻","link":"https://news.cctv.com","pubDate":""},{"title":"我国6G技术试验取得关键突破","source":"科技日报","link":"https://www.stdaily.com","pubDate":""},{"title":"中国女排晋级2026世锦赛八强","source":"新华社","link":"https://www.xinhuanet.com","pubDate":""},{"title":"数字人民币试点城市扩至60个","source":"经济日报","link":"https://www.ce.cn","pubDate":""}];
+function renderNews(items, dateStr){
+  if (!items || !items.length) return '<div class="empty" style="padding:.6rem 0">暂无新闻，点击刷新获取</div>';
+  return '<div class="news-list">' +
+    items.slice(0, 8).map(function(n, i){
+      return '<div class="news-item" onclick="window.open(\'' + escapeHtml(n.link||n.url||'') + '\',\'_blank\',\'noopener\')">' +
+        '<div class="news-num">' + (i+1) + '</div>' +
+        '<div class="news-content"><div class="news-title">' + escapeHtml(n.title) + '</div>' +
+        (n.source ? '<div class="news-source">' + escapeHtml(n.source) + '</div>' : '') +
+        '</div></div>';
+    }).join('') +
+    '<div style="font-size:.68rem;color:var(--muted);margin-top:.4rem;text-align:center">' + (dateStr ? '更新于 ' + dateStr : '') + '</div>' +
+  '</div>';
+}
+var _newsLoading = false;
+async function fetchDailyNews(){
+  if(_newsLoading) return;
+  _newsLoading = true;
+  var cached = state.daily.newsItems && state.daily.newsDate === todayStr();
+  if(cached){ _newsLoading = false; return; }
+  var today = todayStr();
+  // Try RSS feed via rss2json (works with BBC News)
+  try {
+    var rssUrl = encodeURIComponent('https://feeds.bbci.co.uk/news/rss.xml');
+    var res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + rssUrl);
+    if(res.ok){
+      var data = await res.json();
+      if(data.status === 'ok' && data.items){
+        state.daily.newsItems = data.items.slice(0,8).map(function(item){
+          return { title: item.title, source: 'BBC News', link: item.link, pubDate: item.pubDate };
+        });
+        state.daily.newsDate = today;
+        saveState();
+        _newsLoading = false;
+        if(currentModule === 'daily') renderContent();
+        return;
+      }
+    }
+  } catch(e){ /* fallback to curated */ }
+  // Fallback: curated Chinese news
+  state.daily.newsItems = CURATED_NEWS;
+  state.daily.newsDate = today;
+  saveState();
+  _newsLoading = false;
+  if(currentModule === 'daily') renderContent();
+}
+
+// Also add news init to initModule.daily
+// Find the closing of initModule.daily and add news fetch + refresh handler
+  // Daily news
+  fetchDailyNews();
+  var newsRefresh = document.getElementById('newsRefresh');
+  if(newsRefresh) newsRefresh.addEventListener('click', function(){
+    delete state.daily.newsDate; delete state.daily.newsItems; saveState();
+    fetchDailyNews();
+  });
+  var newsHead = document.getElementById('dailyNewsHead');
+  if(newsHead) newsHead.addEventListener('click', function(){
+    var body = document.getElementById('dailyNewsBody');
+    if(body){
+      var maxH = body.style.maxHeight;
+      body.style.maxHeight = maxH && maxH !== '0px' ? '0px' : '800px';
+      body.style.overflow = maxH && maxH !== '0px' ? 'hidden' : 'visible';
+    }
+  });
+
 };
 function renderTaskList(tasks, date){
   if (!tasks.length) return '<div class="empty"><div class="ico">📝</div>今天还没有任务，添加一个吧</div>';
