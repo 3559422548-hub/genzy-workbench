@@ -2012,7 +2012,9 @@ renderers.homework = function(){
   // Always reset photo state on render
   const hwTasks = [];
   Object.keys(state.daily.tasks).forEach(d=>{
-    (state.daily.tasks[d]||[]).forEach(t=>{ if(t.source==='homework') hwTasks.push(Object.assign({date:d}, t)); });
+    if(d === todayStr()) {
+      (state.daily.tasks[d]||[]).forEach(t=>{ if(t.source==='homework') hwTasks.push(Object.assign({date:d}, t)); });
+    }
   });
   hwTasks.sort((a,b)=> (a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
   const hwListHtml = hwTasks.length ? hwTasks.map(t=>`
