@@ -1206,41 +1206,16 @@ canvas { max-width:100%; border-radius: var(--radius-sm); background: #111; }
   }
 }
 
-/* 实用工具：轻玻璃工具卡 + 全屏 WebGL 视觉特效卡 */
+/* 实用工具：跳转 ToolKnit 官网的卡片 */
 .mod-tools .tool-card {
   background: rgba(248,249,250,.6);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   border: 1px solid rgba(0,0,0,.08);
 }
-.mod-tools .fx-card {
-  position: relative;
-  padding: 0;
-  overflow: hidden;
-  background: #0b0e16;
-  border: 1px solid rgba(255,255,255,.16);
-  min-height: 230px;
-}
-.mod-tools .fx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.mod-tools .fx-card canvas { display: block; width: 100% !important; height: 100% !important; }
-.mod-tools .fx-label {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  padding: .55rem .7rem;
-  display: flex; align-items: center; justify-content: space-between; gap: .4rem;
-  background: linear-gradient(to top, rgba(0,0,0,.74), rgba(0,0,0,0));
-  color: #fff; font-weight: 600; font-size: .85rem;
-  text-shadow: 0 1px 3px rgba(0,0,0,.6);
-}
-.mod-tools .fx-label .tag {
-  font-size: .66rem; font-weight: 500; opacity: .9;
-  padding: .1rem .45rem; border-radius: 999px;
-  background: rgba(255,255,255,.18); white-space: nowrap;
-}
-.mod-tools .fx-fallback {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.6); font-size: .8rem; text-align: center; padding: 1rem;
-}
+.mod-tools .tools-jump { display:block; text-decoration:none; color:inherit; cursor:pointer; }
+.mod-tools .tools-jump .tools-jump-cta { margin-top:.7rem; display:inline-flex; align-items:center; gap:.4rem; color:var(--accent); font-weight:700; }
+.wx-sec-title { font-size:.95rem; font-weight:700; color:var(--text); margin:.1rem .2rem .6rem; }
 
 /* 卡片悬停动画（与首页天气卡片一致）：上移 + 浮起阴影。
    用 [class*="mod-"] 提升特异性，确保 hover 阴影能盖过各模块风格设置的 box-shadow */
@@ -1415,9 +1390,7 @@ const MODULES = [
   {cat:'其他', icon:'📌', items:[
     {id:'collections', label:'内容收藏', icon:'⭐'},
     {id:'bills', label:'消费记账', icon:'💰'},
-    {id:'kitchen', label:'饭香厨房', icon:'🍳'}
-  ]},
-  {cat:'实用工具', icon:'🛠️', items:[
+    {id:'kitchen', label:'饭香厨房', icon:'🍳'},
     {id:'tools', label:'实用工具', icon:'🧰'}
   ]}
 ];
@@ -3106,24 +3079,30 @@ function renderWeatherData(d){
       '<div class="h">'+Math.round(dy.temperature_2m_max[i])+'°</div><div class="l">'+Math.round(dy.temperature_2m_min[i])+'°</div></div>');}}
   var dayStrip='<div class="wx-day-strip">'+dayCells.join('')+'</div>';
 
-  return '<div class="wx-wrap"><div class="wx-loc"><span>📍 '+escapeHtml(city)+'</span><span class="gear" id="weatherRetry" title="刷新">⚙️</span></div>'+
+  var cardNow='<div class="wx-wrap" style="margin-bottom:.7rem"><div class="wx-loc"><span>📍 '+escapeHtml(city)+'</span><span class="gear" id="weatherRetry" title="刷新">⚙️</span></div>'+
     '<div class="wx-hero"><div class="wx-hero-ico">'+emoji+'</div><div class="wx-hero-name">'+name+'</div></div>'+
     '<div class="wx-main"><div class="wx-temp-circle"><div class="t">'+Math.round(cx.temperature_2m)+'°</div><div class="hilo">H:'+todayMax+'°  L:'+todayMin+'°</div></div>'+
     '<div class="wx-side">'+
       '<div class="wx-pill"><div class="lbl">空气质量</div><div class="val">'+(aqiVal==null?'—':aqiVal)+'</div><div class="sub">'+aqiInfo.txt+'</div>'+(aqiInfo.tip?'<div style="font-size:.65rem;color:#555;margin-top:.1rem">'+aqiInfo.tip+'</div>':'')+'</div>'+
       '<div class="wx-pill"><div class="lbl">紫外线指数</div><div class="val">'+(uvVal==null?'—':Math.round(uvVal))+'</div><div class="sub">'+uvInfo.txt+'</div>'+(uvInfo.tip?'<div style="font-size:.65rem;color:#555;margin-top:.1rem">'+uvInfo.tip+'</div>':'')+'</div>'+
-    '</div></div><div class="wx-divider"></div>'+hourlyHTML+dayStrip+
-    '<div class="wx-grid">'+
+    '</div></div></div>';
+
+  var cardHour = hourlyHTML ? '<div class="wx-wrap" style="margin-bottom:.7rem"><div class="wx-sec-title">⏰ 逐小时预报</div>'+hourlyHTML+'</div>' : '';
+  var cardDays = '<div class="wx-wrap" style="margin-bottom:.7rem"><div class="wx-sec-title">📅 未来几天</div>'+dayStrip+'</div>';
+  var cardMore='<div class="wx-wrap" style="margin-bottom:.7rem"><div class="wx-sec-title">📊 更多指标</div><div class="wx-grid">'+
       '<div class="wx-metric"><div><div class="lbl">空气质量</div><div class="sub">'+aqiInfo.txt+'</div></div><div class="wx-gauge">'+gaugeSVG(Math.min(aqiVal||0,200),200,'#22c55e')+'</div><div class="vis"><div class="v">'+(aqiVal==null?'—':aqiVal)+'</div></div>'+(aqiInfo.tip?'<div style="font-size:.68rem;color:#888;margin-top:.2rem;text-align:center">'+aqiInfo.tip+'</div>':'')+'</div>'+
       '<div class="wx-metric"><div><div class="lbl">湿度</div><div class="sub">实时</div></div><div class="wx-bcircle"><div class="v">'+Math.round(cx.relative_humidity_2m||0)+'%</div></div></div>'+
       '<div class="wx-metric"><div><div class="lbl">风速</div><div class="sub">'+compassArrow(cx.wind_direction_10m)+' 风</div></div><div class="wx-compass">'+compassSVG(cx.wind_direction_10m)+'</div><div class="vis"><div class="v">'+Math.round(cx.wind_speed_10m||0)+'</div><div class="u">km/h</div></div></div>'+
       '<div class="wx-metric"><div><div class="lbl">紫外线指数</div><div class="sub">'+uvInfo.txt+'</div></div><div class="wx-uv-stack">'+uvSVG(uvInfo.lv)+'</div><div class="vis"><div class="v">'+(uvVal==null?'—':Math.round(uvVal))+'</div></div>'+(uvInfo.tip?'<div style="font-size:.68rem;color:#888;margin-top:.2rem;text-align:center">'+uvInfo.tip+'</div>':'')+'</div>'+
       '<div class="wx-metric"><div><div class="lbl">日落</div><div class="sub">日出 '+fmtHM(sunrise)+'</div></div><div class="wx-sunset-gauge">'+sunsetSVG(sunsetPct)+'</div><div class="vis"><div class="v">'+fmtHM(sunset)+'</div></div></div>'+
       '<div class="wx-metric"><div><div class="lbl">体感温度</div><div class="sub">实时</div></div><div class="wx-bcircle"><div class="v">'+Math.round(cx.apparent_temperature||cx.temperature_2m)+'°</div><div class="u">体感</div></div></div>'+
-    '</div>'+
-    '<div style="font-size:.65rem;color:rgba(0,0,0,.4);text-align:center;margin-top:.6rem">Open-Meteo'+(state.weather&&state.weather.lastUpdate?' · '+new Date(state.weather.lastUpdate).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' 更新':'')+'</div>'+
-  '</div>';
-};
+    '</div></div>';
+
+  var footer='<div style="font-size:.65rem;color:rgba(0,0,0,.4);text-align:center;margin-top:.2rem">Open-Meteo'+(state.weather&&state.weather.lastUpdate?' · '+new Date(state.weather.lastUpdate).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' 更新':'')+'</div>';
+
+  return cardNow+cardHour+cardDays+cardMore+footer;
+}
+
 initModule.weather = function(){
   var retry = document.getElementById('weatherRetry');
   if(retry) retry.addEventListener('click', function(){ loadWeather(true); });
@@ -3518,281 +3497,20 @@ renderers.adventure = function(){
 };
 initModule.adventure = function(){};
 
-// ===== 实用工具模块（纯前端小工具 + 实时 WebGL 视觉特效，移植自 toolknit-desktop）=====
+// ===== 实用工具模块（跳转 ToolKnit 官网）=====
 renderers.tools = function(){
   return ''
   + '<div class="page-head"><div>'
-  +   '<h2>🛠️ 实用工具</h2>'
-  +   '<div class="sub">纯前端小工具 + 实时 WebGL 视觉特效，即开即用、数据不出本机</div>'
+  +   '<h2>🧰 实用工具</h2>'
+  +   '<div class="sub">浏览器端跑不动的桌面工具，去原站用</div>'
   + '</div></div>'
-  + '<div class="card-title" style="margin:.3rem 0 .6rem"><span class="ttl">🧰 常用小工具</span></div>'
-  + '<div class="grid-2">'
-  +   '<div class="card tool-card"><div class="card-title"><span class="ttl">📝 文本统计</span></div>'
-  +     '<textarea id="ttInput" class="textarea" placeholder="粘贴或输入文本…" style="min-height:90px"></textarea>'
-  +     '<div class="stat-grid" style="margin-top:.6rem">'
-  +       '<div class="stat-box"><div class="num" id="ttChars">0</div><div class="lbl">字符</div></div>'
-  +       '<div class="stat-box"><div class="num" id="ttNoSpace">0</div><div class="lbl">去空格</div></div>'
-  +       '<div class="stat-box"><div class="num" id="ttWords">0</div><div class="lbl">词数</div></div>'
-  +       '<div class="stat-box"><div class="num" id="ttLines">0</div><div class="lbl">行数</div></div>'
-  +     '</div></div>'
-  +   '<div class="card tool-card"><div class="card-title"><span class="ttl">🔤 文本格式化</span></div>'
-  +     '<textarea id="tfInput" class="textarea" placeholder="输入要处理的文本…" style="min-height:90px"></textarea>'
-  +     '<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem">'
-  +       '<button class="btn btn-sm tf-btn" data-tf="upper">转大写</button>'
-  +       '<button class="btn btn-sm tf-btn" data-tf="lower">转小写</button>'
-  +       '<button class="btn btn-sm tf-btn" data-tf="trim">去多余空格</button>'
-  +       '<button class="btn btn-sm tf-btn" data-tf="noblank">去空行</button>'
-  +       '<button class="btn btn-sm tf-btn" data-tf="reverse">反转</button>'
-  +     '</div></div>'
-  +   '<div class="card tool-card"><div class="card-title"><span class="ttl">⏱️ 时间戳转换</span></div>'
-  +     '<div class="form-grid-2">'
-  +       '<div><div class="muted" style="font-size:.72rem;margin-bottom:.2rem">日期时间</div><input id="tsDate" class="input" type="datetime-local"></div>'
-  +       '<div><div class="muted" style="font-size:.72rem;margin-bottom:.2rem">Unix 秒</div><input id="tsSec" class="input" type="number" placeholder="1700000000"></div>'
-  +     '</div>'
-  +     '<div style="margin-top:.5rem;font-size:.74rem;color:var(--muted);line-height:1.6">本地：<b id="tsLocal" style="color:var(--text)">—</b><br>UTC：<b id="tsUtc" style="color:var(--text)">—</b></div></div>'
-  +   '<div class="card tool-card"><div class="card-title"><span class="ttl">⚖️ BMI 计算器</span></div>'
-  +     '<div class="form-grid-2">'
-  +       '<div><div class="muted" style="font-size:.72rem;margin-bottom:.2rem">身高(cm)</div><input id="bmiH" class="input" type="number" value="170"></div>'
-  +       '<div><div class="muted" style="font-size:.72rem;margin-bottom:.2rem">体重(kg)</div><input id="bmiW" class="input" type="number" value="60"></div>'
-  +     '</div>'
-  +     '<div style="margin-top:.6rem;display:flex;align-items:baseline;gap:.5rem"><span style="font-size:1.8rem;font-weight:800" id="bmiOut">—</span><span id="bmiCat" style="font-weight:700"></span></div></div>'
-  +   '<div class="card tool-card"><div class="card-title"><span class="ttl">🎨 取色器</span></div>'
-  +     '<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">'
-  +       '<div id="cpSwatch" style="width:36px;height:36px;border-radius:8px;border:1px solid rgba(0,0,0,.15);background:#7C4DFF"></div>'
-  +       '<input id="cpInput" class="input" type="color" value="#7C4DFF" style="width:52px;height:38px;padding:2px">'
-  +       '<button id="cpCopy" class="btn btn-sm">复制 HEX</button>'
-  +       '<button id="cpEye" class="btn btn-sm secondary">屏幕取色</button>'
-  +     '</div>'
-  +     '<div style="font-size:.8rem;color:var(--muted)">HEX：<b id="cpHex" style="color:var(--text)">#7C4DFF</b> · RGB：<b id="cpRgb" style="color:var(--text)">rgb(124,77,208)</b></div></div>'
-  +   '<div class="card tool-card"><div class="card-title"><span class="ttl">⌨️ 打字测速</span><button id="typingReset" class="btn btn-sm ghost">重置</button></div>'
-  +     '<div id="typingSample" class="muted" style="font-size:.8rem;line-height:1.6;margin-bottom:.5rem">The quick brown fox jumps over the lazy dog. 熟能生巧，坚持每天进步一点点。</div>'
-  +     '<textarea id="typingInput" class="textarea" placeholder="在此照上方文本打字…" style="min-height:64px"></textarea>'
-  +     '<div style="margin-top:.5rem;font-size:.8rem">速度 <b id="typingWpm" style="color:var(--accent)">—</b> WPM · 正确率 <b id="typingAcc" style="color:var(--accent)">—</b></div></div>'
-  + '</div>'
-  + '<div class="card-title" style="margin:1rem 0 .6rem"><span class="ttl">✨ 视觉特效</span><span class="muted" style="font-size:.72rem;font-weight:400">实时 WebGL 渲染 · 首次打开联网加载渲染库</span></div>'
-  + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem">'
-  +   '<div class="card fx-card"><div class="fx-canvas" id="fx-plasma"></div><div class="fx-label"><span>🔮 Plasma 等离子</span><span class="tag">ogl</span></div></div>'
-  +   '<div class="card fx-card"><div class="fx-canvas" id="fx-plasmawave"></div><div class="fx-label"><span>🌊 Plasma Wave 波动</span><span class="tag">ogl</span></div></div>'
-  +   '<div class="card fx-card"><div class="fx-canvas" id="fx-ferrofluid"></div><div class="fx-label"><span>🧲 Ferrofluid 磁流</span><span class="tag">ogl</span></div></div>'
-  +   '<div class="card fx-card"><div class="fx-canvas" id="fx-lightrays"></div><div class="fx-label"><span>☀️ Light Rays 光束</span><span class="tag">ogl</span></div></div>'
-  +   '<div class="card fx-card"><div class="fx-canvas" id="fx-darkveil"></div><div class="fx-label"><span>🌌 Dark Veil 暗纱</span><span class="tag">ogl</span></div></div>'
-  +   '<div class="card fx-card"><div class="fx-canvas" id="fx-dither"></div><div class="fx-label"><span>🔳 Dither 抖色</span><span class="tag">three</span></div></div>'
-  + '</div>';
+  + '<a class="card tool-card tools-jump" href="https://toolknit.com" target="_blank" rel="noopener noreferrer">'
+  +   '<div class="card-title"><span class="ttl">🔗 打开 ToolKnit 工具箱</span><span class="pill accent">↗</span></div>'
+  +   '<div class="card-subtitle">文档处理、图像 / 音视频转换、AI 工具、取色、文本统计、打字测速… 访问 <b>toolknit.com</b> 在桌面端使用完整功能。</div>'
+  +   '<div class="tools-jump-cta">前往 toolknit.com →</div>'
+  + '</a>';
 };
-
-// ---- 视觉特效：按需从 CDN 动态加载 ogl / three（避免阻塞首页）----
-let _oglPromise = null, _threePromise = null;
-function getOgl(){
-  if (window._ogl) return Promise.resolve(window._ogl);
-  if (!_oglPromise) _oglPromise = import('https://esm.sh/ogl@1.0.11').then(m => { window._ogl = m; return m; }).catch(e => { console.warn('ogl 加载失败', e); return null; });
-  return _oglPromise;
-}
-function getThree(){
-  if (window._three) return Promise.resolve(window._three);
-  if (!_threePromise) _threePromise = import('https://esm.sh/three@0.160.0').then(m => { window._three = m; return m; }).catch(e => { console.warn('three 加载失败', e); return null; });
-  return _threePromise;
-}
-function copyText(t){
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(()=>toast('已复制：'+t)).catch(()=>toast('复制失败'));
-  else toast('当前环境不支持复制');
-}
-
-// ---- 各特效初始化器（忠实移植自 toolknit-desktop 视觉特效源码）----
-function fxPlasma(ogl, el, opt){
-  const { Renderer, Program, Mesh, Triangle } = ogl;
-  const hexToRgb = hex => { const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); if(!r) return [1,0.5,0.2]; return [parseInt(r[1],16)/255,parseInt(r[2],16)/255,parseInt(r[3],16)/255]; };
-  const vertex = '#version 300 es\nprecision highp float;\nin vec2 position;\nin vec2 uv;\nout vec2 vUv;\nvoid main(){ vUv=uv; gl_Position=vec4(position,0.0,1.0); }';
-  const fragment = '#version 300 es\nprecision highp float;\nuniform vec2 iResolution; uniform float iTime;\nuniform vec3 uCustomColor; uniform float uUseCustomColor;\nuniform float uSpeed; uniform float uDirection; uniform float uScale; uniform float uOpacity;\nuniform vec2 uMouse; uniform float uMouseInteractive;\nout vec4 fragColor;\nvoid mainImage(out vec4 o, vec2 C){\n  vec2 center=iResolution.xy*0.5; C=(C-center)/uScale+center;\n  vec2 mouseOffset=(uMouse-center)*0.0002; C+=mouseOffset*length(C-center)*step(0.5,uMouseInteractive);\n  float i,d,z,T=iTime*uSpeed*uDirection; vec3 O,p,S;\n  for(vec2 r=iResolution.xy, Q; ++i<60.; O+=o.w/d*o.xyz){\n    p=z*normalize(vec3(C-.5*r,r.y)); p.z-=4.; S=p; d=p.y-T;\n    p.x+=.4*(1.+p.y)*sin(d+p.x*0.1)*cos(.34*d+p.x*0.05);\n    Q=p.xz*=mat2(cos(p.y+vec4(0,11,33,0)-T));\n    z+=d=abs(sqrt(length(Q*Q))-.25*(5.+S.y))/3.+8e-4;\n    o=1.+sin(S.y+p.z*.5+S.z-length(S-p)+vec4(2,1,0,8));\n  }\n  o.xyz=tanh(O/1e4);\n}\nbool finite1(float x){ return !(isnan(x)||isinf(x)); }\nvec3 sanitize(vec3 c){ return vec3(finite1(c.r)?c.r:0.0, finite1(c.g)?c.g:0.0, finite1(c.b)?c.b:0.0); }\nvoid main(){ vec4 o=vec4(0.0); mainImage(o, gl_FragCoord.xy); vec3 rgb=sanitize(o.rgb);\n  float intensity=(rgb.r+rgb.g+rgb.b)/3.0; vec3 customColor=intensity*uCustomColor;\n  vec3 finalColor=mix(rgb,customColor,step(0.5,uUseCustomColor));\n  float alpha=length(rgb)*uOpacity; fragColor=vec4(finalColor,alpha); }';
-  const color = opt.color || '#B497CF';
-  const renderer = new Renderer({ webgl:2, alpha:true, antialias:false, dpr: Math.min(window.devicePixelRatio||1,2) });
-  const gl = renderer.gl; const canvas = gl.canvas;
-  canvas.style.display='block'; canvas.style.width='100%'; canvas.style.height='100%';
-  el.appendChild(canvas);
-  const geometry = new Triangle(gl);
-  const program = new Program(gl, { vertex, fragment, uniforms:{
-    iTime:{value:0}, iResolution:{value:new Float32Array([1,1])},
-    uCustomColor:{value:new Float32Array(hexToRgb(color))}, uUseCustomColor:{value:1.0},
-    uSpeed:{value:(opt.speed||1)*0.4}, uDirection:{value:1.0}, uScale:{value:opt.scale||1},
-    uOpacity:{value:opt.opacity||1}, uMouse:{value:new Float32Array([0,0])}, uMouseInteractive:{value:0.0}
-  }});
-  const mesh = new Mesh(gl, { geometry, program });
-  const setSize = () => { const rect=el.getBoundingClientRect(); const w=Math.max(1,Math.floor(rect.width)), h=Math.max(1,Math.floor(rect.height)); renderer.setSize(w,h); const res=program.uniforms.iResolution.value; res[0]=gl.drawingBufferWidth; res[1]=gl.drawingBufferHeight; };
-  const ro = new ResizeObserver(setSize); ro.observe(el); setSize();
-  let raf=0; const t0=performance.now();
-  const loop = t => { program.uniforms.iTime.value=(t-t0)*0.001; renderer.render({ scene:mesh }); raf=requestAnimationFrame(loop); };
-  raf=requestAnimationFrame(loop);
-  return () => { cancelAnimationFrame(raf); ro.disconnect(); try { const e=gl.getExtension('WEBGL_lose_context'); if(e) e.loseContext(); } catch(_){} try { el.removeChild(canvas); } catch(_){} };
-}
-
-function fxPlasmaWave(ogl, el, opt){
-  const { Renderer, Camera, Transform, Program, Mesh, Geometry } = ogl;
-  const hexToRgb = hex => { const c=hex.replace('#',''); return [parseInt(c.slice(0,2),16)/255, parseInt(c.slice(2,4),16)/255, parseInt(c.slice(4,6),16)/255]; };
-  const VERT='attribute vec2 position; void main(){ gl_Position=vec4(position,0.0,1.0); }';
-  const FRAG='precision mediump float;\nuniform float iTime; uniform vec2 iResolution; uniform vec2 uOffset; uniform float uRotation;\nuniform float uFocalLength; uniform float uSpeed1; uniform float uSpeed2; uniform float uDir2; uniform float uBend1; uniform float uBend2;\nuniform vec3 uColor1; uniform vec3 uColor2;\nconst float lt=0.3; const float pi=3.14159; const float pi2=6.28318; const float pi_2=1.5708;\n#define MAX_STEPS 14\nvoid mainImage(out vec4 C, in vec2 U){\n  float t=iTime*pi; float s=1.0; float d=0.0; vec2 R=iResolution;\n  vec3 o=vec3(0.0,0.0,-7.0); vec3 u=normalize(vec3((U-0.5*R)/R.y,uFocalLength)); vec2 k=vec2(0.0); vec3 p;\n  float t1=t*0.7, t2=t*0.9, tSpeed1=t*uSpeed1, tSpeed2=t*uSpeed2*uDir2;\n  for(int i=0;i<MAX_STEPS;++i){\n    p=o+u*d; p.x-=15.0; float px=p.x;\n    float wob1=uBend1+sin(t1+px*0.8)*0.1; float wob2=uBend2+cos(t2+px*1.1)*0.1;\n    float px2=px+pi_2; vec2 sinOffset=sin(vec2(px,px2)+tSpeed1)*wob1; vec2 cosOffset=cos(vec2(px,px2)+tSpeed2)*wob2;\n    vec2 yz=p.yz; float pxLt=px+lt;\n    k.x=max(pxLt,length(yz-sinOffset)-lt); k.y=max(pxLt,length(yz-cosOffset)-lt);\n    float current=min(k.x,k.y); s=min(s,current); if(s<0.001||d>300.0) break; d+=s*0.7;\n  }\n  float sqrtD=sqrt(d); vec3 raw=max(cos(d*pi2)-s*sqrtD-vec3(k,0.0),0.0); raw.gb+=0.1;\n  if(max(raw.r,max(raw.g,raw.b))<0.15) discard;\n  raw=raw*0.4+raw.brg*0.6+raw*raw;\n  float lum=dot(raw,vec3(0.299,0.587,0.114));\n  float w1=max(0.0,1.0-k.x*2.0); float w2=max(0.0,1.0-k.y*2.0); float wt=w1+w2+0.001;\n  vec3 c=(uColor1*w1+uColor2*w2)/wt*lum*3.5; C=vec4(c,1.0);\n}\nvoid main(){ vec2 coord=gl_FragCoord.xy+uOffset; coord-=0.5*iResolution; float c=cos(uRotation), s=sin(uRotation); coord=mat2(c,-s,s,c)*coord; coord+=0.5*iResolution; vec4 color; mainImage(color,coord); gl_FragColor=color; }';
-  const colors = opt.colors || ['#A855F7','#06B6D4'];
-  const renderer = new Renderer({ alpha:true, dpr:Math.min(window.devicePixelRatio,1.5), antialias:false, depth:false, stencil:false, premultipliedAlpha:false, preserveDrawingBuffer:false, powerPreference:'high-performance' });
-  const gl=renderer.gl; gl.clearColor(0,0,0,0); el.appendChild(gl.canvas);
-  const camera=new Camera(gl); const scene=new Transform();
-  const geometry=new Geometry(gl,{ position:{ size:2, data:new Float32Array([-1,-1,3,-1,-1,3]) } });
-  const program=new Program(gl,{ vertex:VERT, fragment:FRAG, uniforms:{
-    iTime:{value:0}, iResolution:{value:new Float32Array([1,1])}, uOffset:{value:new Float32Array([0,0])},
-    uRotation:{value:0}, uFocalLength:{value:0.8}, uSpeed1:{value:0.05}, uSpeed2:{value:0.05},
-    uDir2:{value:1.0}, uBend1:{value:1}, uBend2:{value:0.5},
-    uColor1:{value:hexToRgb(colors[0])}, uColor2:{value:hexToRgb(colors[1])}
-  }});
-  new Mesh(gl,{geometry,program}).setParent(scene);
-  const resize=()=>{ const rect=el.getBoundingClientRect(); const w=rect.width||1, h=rect.height||1; renderer.setSize(w,h); const u=program.uniforms.iResolution; u.value[0]=w*renderer.dpr; u.value[1]=h*renderer.dpr; gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight); };
-  const ro=new ResizeObserver(resize); ro.observe(el); resize();
-  const start=performance.now(); let raf;
-  const update=now=>{ program.uniforms.iTime.value=(now-start)*0.001; renderer.render({scene,camera}); raf=requestAnimationFrame(update); };
-  raf=requestAnimationFrame(update);
-  return ()=>{ cancelAnimationFrame(raf); ro.disconnect(); if(gl.canvas.parentNode===el) el.removeChild(gl.canvas); try{ gl.getExtension('WEBGL_lose_context')?.loseContext(); }catch(_){} };
-}
-
-function fxFerrofluid(ogl, el, opt){
-  const { Renderer, Program, Mesh, Triangle } = ogl;
-  const MAX_COLORS=8;
-  const hexToRGB = hex => { const c=hex.replace('#','').padEnd(6,'0'); return [parseInt(c.slice(0,2),16)/255, parseInt(c.slice(2,4),16)/255, parseInt(c.slice(4,6),16)/255]; };
-  const prepColors = input => { const base=(input&&input.length?input:['#4F46E5','#06B6D4','#E0F2FE']).slice(0,MAX_COLORS); const count=base.length; const arr=[]; for(let i=0;i<MAX_COLORS;i++) arr.push(hexToRGB(base[Math.min(i,count-1)])); const avg=[0,0,0]; for(let i=0;i<count;i++){ avg[0]+=arr[i][0]; avg[1]+=arr[i][1]; avg[2]+=arr[i][2]; } avg[0]/=count; avg[1]/=count; avg[2]/=count; return {arr,count,avg}; };
-  const flowVec = d => { switch(d){ case 'up':return [0,1]; case 'down':return [0,-1]; case 'left':return [-1,0]; case 'right':return [1,0]; default:return [0,-1]; } };
-  const vertex='attribute vec2 position; attribute vec2 uv; varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,0.0,1.0); }';
-  const fragment='precision highp float;\nuniform vec3 iResolution; uniform vec2 iMouse; uniform float iTime;\nuniform vec3 uColor0; uniform vec3 uColor1; uniform vec3 uColor2; uniform vec3 uColor3; uniform vec3 uColor4; uniform vec3 uColor5; uniform vec3 uColor6; uniform vec3 uColor7;\nuniform int uColorCount; uniform vec3 uMouseColor; uniform vec2 uFlow; uniform float uSpeed; uniform float uScale; uniform float uTurbulence; uniform float uFluidity; uniform float uRimWidth; uniform float uSharpness; uniform float uShimmer; uniform float uGlow; uniform float uOpacity; uniform float uMouseEnabled; uniform float uMouseStrength; uniform float uMouseRadius;\nvarying vec2 vUv;\n#define PI 3.14159265\nvec3 palette(float h){ int count=uColorCount; if(count<1) count=1; int idx=int(floor(clamp(h,0.0,0.999999)*float(count))); if(idx<=0) return uColor0; if(idx==1) return uColor1; if(idx==2) return uColor2; if(idx==3) return uColor3; if(idx==4) return uColor4; if(idx==5) return uColor5; if(idx==6) return uColor6; return uColor7; }\nfloat hash(vec3 p3){ p3=fract(p3*0.1031); p3+=dot(p3,p3.zyx+33.33); return fract((p3.x+p3.y)*p3.z); }\nfloat smin(float a,float b,float k){ float r=exp2(-a/k)+exp2(-b/k); return -k*log2(r); }\nfloat sinlerp(float a,float b,float w){ return mix(a,b,(sin(w*PI-PI/2.0)+1.0)/2.0); }\nfloat vn(vec2 p,float s,float seed){ vec2 cellp=floor(p/s); vec2 relp=mod(p,s); float g1=hash(vec3(cellp,seed)); float g2=hash(vec3(cellp.x+1.0,cellp.y,seed)); float g3=hash(vec3(cellp.x+1.0,cellp.y+1.0,seed)); float g4=hash(vec3(cellp.x,cellp.y+1.0,seed)); float bx=sinlerp(g1,g2,relp.x/s); float tx=sinlerp(g4,g3,relp.x/s); return sinlerp(bx,tx,relp.y/s); }\nfloat dbn(vec2 p,float s,float seed){ float o=s/2.0; float n0=vn(p,s,seed); float n1=vn(p+vec2(o,o),s,seed+0.1); float n2=vn(p+vec2(-o,o),s,seed+0.2); float n3=vn(p+vec2(o,-o),s,seed+0.3); float n4=vn(p+vec2(-o,-o),s,seed+0.4); return (2.0*n0+1.5*n1+1.25*n2+1.125*n3+n4)/7.0; }\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord){\n  float ref=700.0/max(uScale,0.05); vec2 p=fragCoord/iResolution.y*ref; float spd=200.0*uSpeed; float t=iTime; vec2 dir=uFlow; vec2 perp=vec2(-dir.y,dir.x);\n  float distort1=vn(p+perp*(t*spd),60.0,10.0)*50.0*uTurbulence; float distort2=vn(p-perp*(t*spd),120.0,15.0)*100.0*uTurbulence;\n  float peaks=dbn(p+distort1+dir*(t*spd*0.5),40.0,1.0); float peaks2=dbn(p+distort2-dir*(t*spd*0.5),40.0,0.0);\n  float mapeaks=smin(peaks,peaks2,max(uFluidity,0.001));\n  float mGlow=0.0; if(uMouseEnabled>0.5){ vec2 mp=iMouse/iResolution.y*ref; float md=length(p-mp)/ref; float rr=max(uMouseRadius,0.02); mGlow=exp(-md*md/(rr*rr))*uMouseStrength; }\n  float band=(uRimWidth-abs((mapeaks-0.4)*2.0))*5.0; float ltn=clamp(band-vn(p+dir*(t*spd*0.5),60.0,12.0)*uShimmer,0.0,1.0);\n  ltn=pow(ltn,uSharpness)*uGlow; ltn*=clamp(1.0-mGlow,0.0,1.0);\n  float h=clamp(0.5+(peaks-peaks2)*0.8,0.0,1.0); vec3 col=palette(h); vec3 outc=col*ltn; float a=clamp(max(outc.r,max(outc.g,outc.b)),0.0,1.0); fragColor=vec4(outc,a*uOpacity);\n}\nvoid main(){ vec4 color; mainImage(color,vUv*iResolution.xy); gl_FragColor=color; }';
-  const { colors=['#ffffff','#ffffff','#ffffff'], speed=0.5, scale=1.6, turbulence=1, fluidity=0.1, rimWidth=0.2, sharpness=2.5, shimmer=1.5, glow=2, flowDirection='down', opacity=1 } = opt;
-  const renderer = new Renderer({ webgl:2, dpr:Math.min(window.devicePixelRatio||1,2), alpha:true, antialias:true });
-  const gl=renderer.gl; const canvas=gl.canvas; gl.clearColor(0,0,0,0); canvas.style.width='100%'; canvas.style.height='100%'; canvas.style.display='block'; el.appendChild(canvas);
-  const { arr, count, avg } = prepColors(colors);
-  const uniforms = { iResolution:{value:[gl.drawingBufferWidth,gl.drawingBufferHeight,1]}, iMouse:{value:[0,0]}, iTime:{value:0}, uColor0:{value:arr[0]}, uColor1:{value:arr[1]}, uColor2:{value:arr[2]}, uColor3:{value:arr[3]}, uColor4:{value:arr[4]}, uColor5:{value:arr[5]}, uColor6:{value:arr[6]}, uColor7:{value:arr[7]}, uColorCount:{value:count}, uMouseColor:{value:avg}, uFlow:{value:flowVec(flowDirection)}, uSpeed:{value:speed}, uScale:{value:scale}, uTurbulence:{value:turbulence}, uFluidity:{value:fluidity}, uRimWidth:{value:rimWidth}, uSharpness:{value:sharpness}, uShimmer:{value:shimmer}, uGlow:{value:glow}, uOpacity:{value:opacity}, uMouseEnabled:{value:0}, uMouseStrength:{value:1}, uMouseRadius:{value:0.35} };
-  const program=new Program(gl,{vertex,fragment,uniforms,transparent:true}); const geometry=new Triangle(gl); const mesh=new Mesh(gl,{geometry,program});
-  const resize=()=>{ const rect=el.getBoundingClientRect(); renderer.setSize(rect.width,rect.height); uniforms.iResolution.value=[gl.drawingBufferWidth,gl.drawingBufferHeight,1]; };
-  resize(); const ro=new ResizeObserver(resize); ro.observe(el);
-  let raf=null;
-  const loop=t=>{ raf=requestAnimationFrame(loop); uniforms.iTime.value=t*0.001; try{ renderer.render({scene:mesh}); }catch(e){} };
-  raf=requestAnimationFrame(loop);
-  return ()=>{ if(raf) cancelAnimationFrame(raf); ro.disconnect(); if(canvas.parentElement===el) el.removeChild(canvas); try{ gl.getExtension('WEBGL_lose_context')?.loseContext(); }catch(_){} };
-}
-
-function fxLightRays(ogl, el, opt){
-  const { Renderer, Program, Triangle, Mesh } = ogl;
-  const hexToRgb = hex => { const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return m?[parseInt(m[1],16)/255,parseInt(m[2],16)/255,parseInt(m[3],16)/255]:[1,1,1]; };
-  const getAnchorAndDir = (origin,w,h)=>{ const o=0.2; switch(origin){ case 'top-left':return {anchor:[0,-o*h],dir:[0,1]}; case 'top-right':return {anchor:[w,-o*h],dir:[0,1]}; case 'left':return {anchor:[-o*w,0.5*h],dir:[1,0]}; case 'right':return {anchor:[(1+o)*w,0.5*h],dir:[-1,0]}; case 'bottom-left':return {anchor:[0,(1+o)*h],dir:[0,-1]}; case 'bottom-center':return {anchor:[0.5*w,(1+o)*h],dir:[0,-1]}; case 'bottom-right':return {anchor:[w,(1+o)*h],dir:[0,-1]}; default:return {anchor:[0.5*w,-o*h],dir:[0,1]}; } };
-  const { raysOrigin='top-center', raysColor='#ffffff', raysSpeed=1, lightSpread=1, rayLength=2, pulsating=false, fadeDistance=1.0, saturation=1.0, followMouse=true, mouseInfluence=0.1, noiseAmount=0.0, distortion=0.0 } = opt;
-  let renderer=null, uniforms=null, mesh=null, animationId=null, destroyed=false;
-  let mouse={x:0.5,y:0.5}, smoothMouse={x:0.5,y:0.5};
-  function cleanup(){ if(destroyed) return; destroyed=true; if(animationId){ cancelAnimationFrame(animationId); animationId=null; } window.removeEventListener('resize',updatePlacement); window.removeEventListener('mousemove',handleMouseMove); if(renderer){ try{ const c=renderer.gl.canvas; const e=renderer.gl.getExtension('WEBGL_lose_context'); if(e) e.loseContext(); if(c&&c.parentNode) c.parentNode.removeChild(c); }catch(_){} renderer=null; } uniforms=null; mesh=null; }
-  function handleMouseMove(e){ if(!renderer) return; const rect=el.getBoundingClientRect(); const x=(e.clientX-rect.left)/rect.width, y=(e.clientY-rect.top)/rect.height; mouse={x:Math.max(0,Math.min(1,x)),y:Math.max(0,Math.min(1,y))}; }
-  function updatePlacement(){ if(!renderer||!uniforms) return; renderer.dpr=Math.min(window.devicePixelRatio,2); const wCSS=el.clientWidth, hCSS=el.clientHeight; renderer.setSize(wCSS,hCSS); const dpr=renderer.dpr; const w=wCSS*dpr, h=hCSS*dpr; uniforms.iResolution.value=[w,h]; const a=getAnchorAndDir(raysOrigin,w,h); uniforms.rayPos.value=a.anchor; uniforms.rayDir.value=a.dir; }
-  function loop(t){ if(destroyed||!renderer||!uniforms||!mesh) return; uniforms.iTime.value=t*0.001; if(followMouse&&mouseInfluence>0.0){ const sm=0.92; smoothMouse.x=smoothMouse.x*sm+mouse.x*(1-sm); smoothMouse.y=smoothMouse.y*sm+mouse.y*(1-sm); uniforms.mousePos.value=[smoothMouse.x,smoothMouse.y]; } try{ renderer.render({scene:mesh}); animationId=requestAnimationFrame(loop); }catch(_){} }
-  try{
-    renderer=new Renderer({ dpr:Math.min(window.devicePixelRatio,2), alpha:true });
-    const gl=renderer.gl; gl.canvas.style.width='100%'; gl.canvas.style.height='100%'; gl.canvas.style.display='block';
-    el.innerHTML=''; el.appendChild(gl.canvas);
-    const vert='attribute vec2 position; varying vec2 vUv; void main(){ vUv=position*0.5+0.5; gl_Position=vec4(position,0.0,1.0); }';
-    const frag='precision highp float;\nuniform float iTime; uniform vec2 iResolution; uniform vec2 rayPos; uniform vec2 rayDir; uniform vec3 raysColor; uniform float raysSpeed; uniform float lightSpread; uniform float rayLength; uniform float pulsating; uniform float fadeDistance; uniform float saturation; uniform vec2 mousePos; uniform float mouseInfluence; uniform float noiseAmount; uniform float distortion;\nvarying vec2 vUv;\nfloat noise(vec2 st){ return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123); }\nfloat rayStrength(vec2 src, vec2 ref, vec2 coord, float sA, float sB, float speed){ vec2 st=coord-src; vec2 dn=normalize(st); float ca=dot(dn,ref); float da=cos(ca)+distortion*sin(iTime*2.0+length(st)*0.01)*0.2; float sf=pow(max(da,0.0),1.0/max(lightSpread,0.001)); float dist=length(st); float md=iResolution.x*rayLength; float lf=clamp((md-dist)/md,0.0,1.0); float ff=clamp((iResolution.x*fadeDistance-dist)/(iResolution.x*fadeDistance),0.5,1.0); float pulse=pulsating>0.5?(0.8+0.2*sin(iTime*speed*3.0)):1.0; float base=clamp((0.45+0.15*sin(da*sA+iTime*speed))+(0.3+0.2*cos(-da*sB+iTime*speed)),0.0,1.0); return base*lf*ff*sf*pulse; }\nvoid mainImage(out vec4 fc, in vec2 fc2){ vec2 coord=vec2(fc2.x,iResolution.y-fc2.y); vec2 frd=rayDir; if(mouseInfluence>0.0){ vec2 mp=mousePos*iResolution.xy; vec2 md=normalize(mp-rayPos); frd=normalize(mix(rayDir,md,mouseInfluence)); } vec4 r1=vec4(1.0)*rayStrength(rayPos,frd,coord,36.2214,21.11349,1.5*raysSpeed); vec4 r2=vec4(1.0)*rayStrength(rayPos,frd,coord,22.3991,18.0234,1.1*raysSpeed); fc=r1*0.5+r2*0.4; if(noiseAmount>0.0){ float n=noise(coord*0.01+iTime*0.1); fc.rgb*=(1.0-noiseAmount+noiseAmount*n); } float b=1.0-(coord.y/iResolution.y); fc.x*=0.1+b*0.8; fc.y*=0.3+b*0.6; fc.z*=0.5+b*0.5; if(saturation!=1.0){ float g=dot(fc.rgb,vec3(0.299,0.587,0.114)); fc.rgb=mix(vec3(g),fc.rgb,saturation); } fc.rgb*=raysColor; }\nvoid main(){ vec4 color; mainImage(color,gl_FragCoord.xy); gl_FragColor=color; }';
-    uniforms={ iTime:{value:0}, iResolution:{value:[1,1]}, rayPos:{value:[0,0]}, rayDir:{value:[0,1]}, raysColor:{value:hexToRgb(raysColor)}, raysSpeed:{value:raysSpeed}, lightSpread:{value:lightSpread}, rayLength:{value:rayLength}, pulsating:{value:pulsating?1.0:0.0}, fadeDistance:{value:fadeDistance}, saturation:{value:saturation}, mousePos:{value:[0.5,0.5]}, mouseInfluence:{value:mouseInfluence}, noiseAmount:{value:noiseAmount}, distortion:{value:distortion} };
-    const geometry=new Triangle(gl); const program=new Program(gl,{vertex:vert,fragment:frag,uniforms}); mesh=new Mesh(gl,{geometry,program});
-    window.addEventListener('resize',updatePlacement); if(followMouse) window.addEventListener('mousemove',handleMouseMove);
-    updatePlacement(); animationId=requestAnimationFrame(loop);
-  }catch(e){ console.warn('LightRays 初始化失败',e); cleanup(); try{ el.innerHTML='<div class="fx-fallback">该特效需要 WebGL，当前环境不可用 😢</div>'; }catch(_){} }
-  return cleanup;
-}
-
-function fxDarkVeil(ogl, el, opt){
-  const { Renderer, Program, Mesh, Triangle, Vec2 } = ogl;
-  const vertex='attribute vec2 position; void main(){ gl_Position=vec4(position,0.0,1.0); }';
-  const fragment='#ifdef GL_ES\nprecision lowp float;\n#endif\nuniform vec2 uResolution; uniform float uTime; uniform float uHueShift; uniform float uNoise; uniform float uScan; uniform float uScanFreq; uniform float uWarp;\n#define iTime uTime\n#define iResolution uResolution\nvec4 buf[8];\nfloat rand(vec2 c){ return fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453); }\nmat3 rgb2yiq=mat3(0.299,0.587,0.114,0.596,-0.274,-0.322,0.211,-0.523,0.312);\nmat3 yiq2rgb=mat3(1.0,0.956,0.621,1.0,-0.272,-0.647,1.0,-1.106,1.703);\nvec3 hueShiftRGB(vec3 col,float deg){ vec3 yiq=rgb2yiq*col; float rad=radians(deg); float cosh=cos(rad),sinh=sin(rad); vec3 yiqShift=vec3(yiq.x,yiq.y*cosh-yiq.z*sinh,yiq.y*sinh+yiq.z*cosh); return clamp(yiq2rgb*yiqShift,0.0,1.0); }\nvec4 sigmoid(vec4 x){ return 1./(1.+exp(-x)); }\nvec4 cppn_fn(vec2 coordinate,float in0,float in1,float in2){\n  buf[6]=vec4(coordinate.x,coordinate.y,0.3948333106474662+in0,0.36+in1);\n  buf[7]=vec4(0.14+in2,sqrt(coordinate.x*coordinate.x+coordinate.y*coordinate.y),0.,0.);\n  buf[0]=mat4(vec4(6.5404263,-3.6126034,0.7590882,-1.13613),vec4(2.4582713,3.1660357,1.2219609,0.06276096),vec4(-5.478085,-6.159632,1.8701609,-4.7742867),vec4(6.039214,-5.542865,-0.90925294,3.251348))*buf[6]+mat4(vec4(0.8473259,-5.722911,3.975766,1.6522468),vec4(-0.24321538,0.5839259,-1.7661959,-5.350116),vec4(0.,0.,0.,0.),vec4(0.,0.,0.,0.))*buf[7]+vec4(0.21808943,1.1243913,-1.7969975,5.0294676);\n  buf[1]=mat4(vec4(-3.3522482,-6.0612736,0.55641043,-4.4719114),vec4(0.8631464,1.7432913,5.643898,1.6106541),vec4(2.4941394,-3.5012043,1.7184316,6.357333),vec4(3.310376,8.209261,1.1355612,-1.165539))*buf[6]+mat4(vec4(5.24046,-13.034365,0.009859298,15.870829),vec4(2.987511,3.129433,-0.89023495,-1.6822904),vec4(0.,0.,0.,0.),vec4(0.,0.,0.,0.))*buf[7]+vec4(-5.9457836,-6.573602,-0.8812491,1.5436668);\n  buf[0]=sigmoid(buf[0]);buf[1]=sigmoid(buf[1]);\n  buf[2]=mat4(vec4(-15.219568,8.095543,-2.429353,-1.9381982),vec4(-5.951362,4.3115187,2.6393783,1.274315),vec4(-7.3145227,6.7297835,5.2473326,5.9411426),vec4(5.0796127,8.979051,-1.7278991,-1.158976))*buf[6]+mat4(vec4(-11.967154,-11.608155,6.1486754,11.237008),vec4(2.124141,-6.263192,-1.7050359,-0.7021966),vec4(0.,0.,0.,0.),vec4(0.,0.,0.,0.))*buf[7]+vec4(-4.17164,-3.2281182,-4.576417,-3.6401186);\n  buf[3]=mat4(vec4(3.1832156,-13.738922,1.879223,3.233465),vec4(0.64300746,12.768129,1.9141049,0.50990224),vec4(-0.049295485,4.4807224,1.4733979,1.801449),vec4(5.0039253,13.000481,3.3991797,-4.5561905))*buf[6]+mat4(vec4(-0.1285731,7.720628,-3.1425676,4.742367),vec4(0.6393625,3.714393,-0.8108378,-0.39174938),vec4(0.,0.,0.,0.),vec4(0.,0.,0.,0.))*buf[7]+vec4(-1.1811101,-21.621881,0.7851888,1.2329718);\n  buf[2]=sigmoid(buf[2]);buf[3]=sigmoid(buf[3]);\n  buf[4]=mat4(vec4(5.214916,-7.183024,2.7228765,2.6592617),vec4(-5.601878,-25.3591,4.067988,0.4602802),vec4(-10.57759,24.286327,21.102104,37.546658),vec4(4.3024497,-1.9625226,2.3458803,-1.372816))*buf[0]+mat4(vec4(-17.6526,-10.507558,2.2587414,12.462782),vec4(6.265566,-502.75443,-12.642513,0.9112289),vec4(-10.983244,20.741234,-9.701768,-0.7635988),vec4(5.383626,1.4819539,-4.1911616,-4.8444734))*buf[1]+mat4(vec4(12.785233,-16.345072,-0.39901125,1.7955981),vec4(-30.48365,-1.8345358,1.4542528,-1.1118771),vec4(19.872723,-7.337935,-42.941723,-98.52709),vec4(8.337645,-2.7312303,-2.2927687,-36.142323))*buf[2]+mat4(vec4(-16.298317,3.5471997,-0.44300047,-9.444417),vec4(57.5077,-35.609753,16.163465,-4.1534753),vec4(-0.07470326,-3.8656476,-7.0901804,3.1523974),vec4(-12.559385,-7.077619,1.490437,-0.8211543))*buf[3]+vec4(-7.67914,15.927437,1.3207729,-1.6686112);\n  buf[5]=mat4(vec4(-1.4109162,-0.372762,-3.770383,-21.367174),vec4(-6.2103205,-9.35908,0.92529047,8.82561),vec4(11.460242,-22.348068,13.625772,-18.693201),vec4(-0.3429052,-3.9905605,-2.4626114,-0.45033523))*buf[0]+mat4(vec4(7.3481627,-4.3661838,-6.3037653,-3.868115),vec4(1.5462853,6.5488915,1.9701879,-0.58291394),vec4(6.5858274,-2.2180402,3.7127688,-1.3730392),vec4(-5.7973905,10.134961,-2.3395722,-5.965605))*buf[1]+mat4(vec4(-2.5132585,-6.6685553,-1.4029363,-0.16285264),vec4(-0.37908727,0.53738135,4.389061,-1.3024765),vec4(-0.70647055,2.0111287,-5.1659346,-3.728635),vec4(-13.562562,10.487719,-0.9173751,-2.6487076))*buf[2]+mat4(vec4(-8.645013,6.5546675,-6.3944063,-5.5933375),vec4(-0.57783127,-1.077275,36.91025,5.736769),vec4(14.283112,3.7146652,7.1452246,-4.5958776),vec4(2.7192075,3.6021907,-4.366337,-2.3653464))*buf[3]+mat4(vec4(-5.9000807,-4.329569,1.2427121,8.59503);\n  buf[4]=sigmoid(buf[4]);buf[5]=sigmoid(buf[5]);\n  buf[6]=mat4(vec4(-1.61102,0.7970257,1.4675229,0.20917463),vec4(-28.793737,-7.1390953,1.5025433,4.656581),vec4(-10.94861,39.66238,0.74318546,-10.095605),vec4(-0.7229728,-1.5483948,0.7301322,2.1687684))*buf[0]+mat4(vec4(3.2547753,21.489103,-1.0194173,-3.3100595),vec4(-3.7316632,-3.3792162,-7.223193,-0.23685838),vec4(13.1804495,0.7916005,5.338587,5.687114),vec4(-4.167605,-17.798311,-6.815736,-1.6451967))*buf[1]+mat4(vec4(0.604885,-7.800309,-7.213122,-2.741014),vec4(-3.522382,-0.12359311,-0.5258442,0.43852118),vec4(9.6752825,-22.853785,2.062431,0.099892326),vec4(-4.3196306,-17.730087,2.5184598,5.30267))*buf[2]+mat4(vec4(-6.545563,-15.790176,-6.0438633,-5.415399),vec4(-43.591583,28.551912,-16.00161,18.84728),vec4(4.212382,8.394307,3.0958717,8.657522),vec4(-5.0237565,-4.450633,-4.4768,-5.5010443))*buf[3]+mat4(vec4(1.6985557,-67.05806,6.897715,1.9004834),vec4(1.8680354,2.3915145,2.5231109,4.081538),vec4(11.158006,1.7294737,2.0738268,7.386411),vec4(-4.256034,-306.24686,8.258898,-17.132736))*buf[4]+mat4(vec4(1.6889864,-4.5852966,3.8534803,-6.3482175),vec4(1.3543309,-1.2640043,9.932754,2.9079645),vec4(-5.2770967,0.07150358,-0.13962056,3.3269649),vec4(28.34703,-4.918278,6.1044083,4.085355))*buf[5]+vec4(6.6818056,12.522166,-3.7075126,-4.104386);\n  buf[7]=mat4(vec4(-8.265602,-4.7027016,5.098234,0.7509808),vec4(8.6507845,-17.15949,16.51939,-8.884479),vec4(-4.036479,-2.3946867,-2.6055532,-1.9866527),vec4(-2.2167742,-1.8135649,-5.9759874,4.8846445))*buf[0]+mat4(vec4(6.7790847,3.5076547,-2.8191125,-2.7028968),vec4(-5.743024,-0.27844876,1.4958696,-5.0517144),vec4(13.122226,15.735168,-2.9397483,-4.101023),vec4(-14.375265,-5.030483,-6.2599335,2.9848232))*buf[1]+mat4(vec4(4.0950394,-0.94011575,-5.674733,4.755022),vec4(4.3809423,4.8310084,1.7425908,-3.437416),vec4(2.117492,0.16342592,-104.56341,16.949184),vec4(-5.22543,-2.994248,3.8350096,-1.9364246))*buf[2]+mat4(vec4(-5.900337,1.7946124,-13.604192,-3.8060522),vec4(6.6583457,31.911177,25.164474,91.81147),vec4(11.840538,4.1503043,-0.7314397,6.768467),vec4(-6.3967767,4.034772,6.1714606,-0.32874924))*buf[3]+mat4(vec4(3.4992442,-196.91893,-8.923708,2.8142626),vec4(3.4806502,-3.1846354,5.1725626,5.1804223),vec4(-2.4009497,15.585794,1.2863957,2.0252278),vec4(-71.25271,-62.441242,-8.138444,0.50670296))*buf[4]+mat4(vec4(-12.291733,-11.176166,-7.3474145,4.390294),vec4(10.805477,5.6337385,-0.9385842,-4.7348723),vec4(-12.869276,-7.039391,5.3029537,7.5436664),vec4(1.4593618,8.91898,3.5101583,5.840625))*buf[5]+vec4(2.2415268,-6.705987,-0.98861027,-2.117676);\n  buf[6]=sigmoid(buf[6]);buf[7]=sigmoid(buf[7]);\n  buf[0]=mat4(vec4(1.6794263,1.3817469,2.9625452,0.),vec4(-1.8834411,-1.4806935,-3.5924516,0.),vec4(-1.3279216,-1.0918057,-2.3124623,0.),vec4(0.2662234,0.23235129,0.44178495,0.))*buf[0]+mat4(vec4(-0.6299101,-0.5945583,-0.9125601,0.),vec4(0.17828953,0.18300213,0.18182953,0.),vec4(-2.96544,-2.5819945,-4.9001055,0.),vec4(1.4195864,1.1868085,2.5176322,0.))*buf[1]+mat4(vec4(-1.2584374,-1.0552157,-2.1688404,0.),vec4(-0.7200217,-0.52666044,-1.438251,0.),vec4(0.15345335,0.15196142,0.272854,0.),vec4(0.945728,0.8861938,1.2766753,0.))*buf[2]+mat4(vec4(-2.4218085,-1.968602,-4.35166,0.),vec4(-22.683098,-18.0544,-41.954372,0.),vec4(0.63792,0.5470648,1.1078634,0.),vec4(-1.5489894,-1.3075932,-2.6444845,0.))*buf[3]+mat4(vec4(-0.49252132,-0.39877754,-0.91366625,0.),vec4(0.95609266,0.7923952,1.640221,0.),vec4(0.30616966,0.15693925,0.8639857,0.),vec4(1.1825981,0.94504964,2.176963,0.))*buf[4]+mat4(vec4(0.35446745,0.3293795,0.59547555,0.),vec4(-0.58784515,-0.48177817,-1.0614829,0.),vec4(2.5271258,1.9991658,4.6846647,0.),vec4(0.13042648,0.08864098,0.30187556,0.))*buf[5]+mat4(vec4(-1.7718065,-1.4033192,-3.3355875,0.),vec4(3.1664357,2.638297,5.378702,0.),vec4(-3.1724713,-2.6107926,-5.549295,0.),vec4(-2.851368,-2.249092,-5.3013067,0.))*buf[6]+mat4(vec4(1.5203838,1.2212278,2.8404984,0.),vec4(1.5210563,1.2651345,2.683903,0.),vec4(2.9789467,2.4364579,5.2347264,0.),vec4(2.2270417,1.8825914,3.8028636,0.))*buf[7]+vec4(-1.5468478,-3.6171484,0.24762098,0.);\n  buf[0]=sigmoid(buf[0]);\n  return vec4(buf[0].x,buf[0].y,buf[0].z,1.0);\n}\nvoid mainImage(out vec4 fc, in vec2 fc2){ vec2 uv=fc2/uResolution.xy*2.-1.; uv.y*=-1.; uv+=uWarp*vec2(sin(uv.y*6.283+uTime*0.5),cos(uv.x*6.283+uTime*0.5))*0.05; fc=cppn_fn(uv,0.1*sin(0.3*uTime),0.1*sin(0.69*uTime),0.1*sin(0.44*uTime)); }\nvoid main(){ vec4 col; mainImage(col,gl_FragCoord.xy); col.rgb=hueShiftRGB(col.rgb,uHueShift); float sl=sin(gl_FragCoord.y*uScanFreq)*0.5+0.5; col.rgb*=1.-(sl*sl)*uScan; col.rgb+=(rand(gl_FragCoord.xy+uTime)-0.5)*uNoise; gl_FragColor=vec4(clamp(col.rgb,0.0,1.0),1.0); }';
-  const { hueShift=0, noiseIntensity=0.03, scanlineIntensity=0, speed=1.6, scanlineFrequency=5, warpAmount=0, resolutionScale=1 } = opt;
-  const canvas=document.createElement('canvas'); el.appendChild(canvas);
-  const renderer=new Renderer({ dpr:Math.min(window.devicePixelRatio,2), canvas });
-  const gl=renderer.gl; const geometry=new Triangle(gl);
-  const program=new Program(gl,{ vertex, fragment, uniforms:{ uTime:{value:0}, uResolution:{value:new Vec2()}, uHueShift:{value:hueShift}, uNoise:{value:noiseIntensity}, uScan:{value:scanlineIntensity}, uScanFreq:{value:scanlineFrequency}, uWarp:{value:warpAmount} } });
-  const mesh=new Mesh(gl,{geometry,program});
-  const resize=()=>{ const w=el.clientWidth, h=el.clientHeight; renderer.setSize(w*resolutionScale,h*resolutionScale); program.uniforms.uResolution.value.set(w,h); };
-  window.addEventListener('resize',resize); resize();
-  const start=performance.now(); let frame=0;
-  const loop=()=>{ program.uniforms.uTime.value=((performance.now()-start)/1000)*speed; program.uniforms.uHueShift.value=hueShift; program.uniforms.uNoise.value=noiseIntensity; program.uniforms.uScan.value=scanlineIntensity; program.uniforms.uScanFreq.value=scanlineFrequency; program.uniforms.uWarp.value=warpAmount; renderer.render({scene:mesh}); frame=requestAnimationFrame(loop); };
-  loop();
-  return ()=>{ cancelAnimationFrame(frame); window.removeEventListener('resize',resize); if(canvas.parentNode) canvas.parentNode.removeChild(canvas); };
-}
-
-function fxDither(three, el, opt){
-  const { waveSpeed=0.05, waveFrequency=3, waveAmplitude=0.3, waveColor=[0.5,0.5,0.5], colorNum=4, pixelSize=2 } = opt;
-  const width=el.clientWidth||300, height=el.clientHeight||230;
-  const renderer=new three.WebGLRenderer({ alpha:true, antialias:false, powerPreference:'high-performance' });
-  renderer.setPixelRatio(1); renderer.setSize(width,height); el.appendChild(renderer.domElement);
-  const scene=new three.Scene(); const camera=new three.OrthographicCamera(-1,1,1,-1,0,1);
-  const uniforms={ resolution:{value:new three.Vector2(width,height)}, time:{value:0}, waveSpeed:{value:waveSpeed}, waveFrequency:{value:waveFrequency}, waveAmplitude:{value:waveAmplitude}, waveColor:{value:new three.Color(waveColor[0],waveColor[1],waveColor[2])}, colorNum:{value:colorNum}, pixelSize:{value:pixelSize} };
-  const vShader='precision highp float; varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0); }';
-  const fShader='precision highp float;\nuniform vec2 resolution; uniform float time; uniform float waveSpeed; uniform float waveFrequency; uniform float waveAmplitude; uniform vec3 waveColor; uniform float colorNum; uniform float pixelSize;\nvarying vec2 vUv;\nvec4 mod289(vec4 x){ return x-floor(x*(1.0/289.0))*289.0; }\nvec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }\nvec4 taylorInvSqrt(vec4 r){ return 1.79284291400159-0.85373472095314*r; }\nvec2 fade(vec2 t){ return t*t*t*(t*(t*6.0-15.0)+10.0); }\nfloat cnoise(vec2 P){ vec4 Pi=floor(P.xyxy)+vec4(0.0,0.0,1.0,1.0); vec4 Pf=fract(P.xyxy)-vec4(0.0,0.0,1.0,1.0); Pi=mod289(Pi); vec4 ix=Pi.xzxz; vec4 iy=Pi.yyww; vec4 fx=Pf.xzxz; vec4 fy=Pf.yyww; vec4 i=permute(permute(ix)+iy); vec4 gx=fract(i*(1.0/41.0))*2.0-1.0; vec4 gy=abs(gx)-0.5; vec4 tx=floor(gx+0.5); gx=gx-tx; vec2 g00=vec2(gx.x,gy.x); vec2 g10=vec2(gx.y,gy.y); vec2 g01=vec2(gx.z,gy.z); vec2 g11=vec2(gx.w,gy.w); vec4 norm=taylorInvSqrt(vec4(dot(g00,g00),dot(g01,g01),dot(g10,g10),dot(g11,g11))); g00*=norm.x; g01*=norm.y; g10*=norm.z; g11*=norm.w; float n00=dot(g00,vec2(fx.x,fy.x)); float n10=dot(g10,vec2(fx.y,fy.y)); float n01=dot(g01,vec2(fx.z,fy.z)); float n11=dot(g11,vec2(fx.w,fy.w)); vec2 fade_xy=fade(Pf.xy); vec2 n_x=mix(vec2(n00,n01),vec2(n10,n11),fade_xy.x); return 2.3*mix(n_x.x,n_x.y,fade_xy.y); }\nconst int OCTAVES=4;\nfloat fbm(vec2 p){ float value=0.0; float amp=1.0; float freq=waveFrequency; for(int i=0;i<OCTAVES;i++){ value+=amp*abs(cnoise(p)); p*=freq; amp*=waveAmplitude; } return value; }\nfloat pattern(vec2 p){ vec2 p2=p-time*waveSpeed; return fbm(p+fbm(p2)); }\nfloat Bayer2(vec2 a){ a=floor(a); return fract(a.x/2.0+a.y*a.y*0.75); }\n#define Bayer4(a) (Bayer2(0.5*(a))*0.25+Bayer2(a))\n#define Bayer8(a) (Bayer4(0.5*(a))*0.25+Bayer2(a))\nvec3 dither(vec2 uv, vec3 color){ vec2 sc=floor(uv*resolution/pixelSize); int x=int(mod(sc.x,8.0)); int y=int(mod(sc.y,8.0)); float threshold=Bayer8(vec2(x,y))-0.25; float stepv=1.0/(colorNum-1.0); color+=threshold*stepv; float bias=0.2; color=clamp(color-bias,0.0,1.0); return floor(color*(colorNum-1.0)+0.5)/(colorNum-1.0); }\nvoid main(){ vec2 uv=gl_FragCoord.xy/resolution.xy; uv-=0.5; uv.x*=resolution.x/resolution.y; float f=pattern(uv); vec3 col=mix(vec3(0.0),waveColor,f); col=dither(gl_FragCoord.xy,col); gl_FragColor=vec4(col,1.0); }';
-  const geometry=new three.PlaneGeometry(2,2); const material=new three.ShaderMaterial({ vertexShader:vShader, fragmentShader:fShader, uniforms }); const mesh=new three.Mesh(geometry,material); scene.add(mesh);
-  const resize=()=>{ const w=el.clientWidth||300, h=el.clientHeight||230; renderer.setSize(w,h); uniforms.resolution.value.set(w,h); };
-  const ro=new ResizeObserver(resize); ro.observe(el);
-  const start=performance.now(); let raf;
-  const animate=now=>{ uniforms.time.value=(now-start)*0.001; renderer.render(scene,camera); raf=requestAnimationFrame(animate); };
-  raf=requestAnimationFrame(animate);
-  return ()=>{ cancelAnimationFrame(raf); ro.disconnect(); if(renderer.domElement.parentNode===el) el.removeChild(renderer.domElement); material.dispose(); geometry.dispose(); renderer.dispose(); };
-}
-
-// ---- 实用工具交互绑定 ----
-function bindToolsUI(){
-  const tt=$('#ttInput');
-  if(tt) tt.addEventListener('input', ()=>{ const v=tt.value; $('#ttChars').textContent=v.length; $('#ttNoSpace').textContent=v.replace(/\s/g,'').length; $('#ttWords').textContent=(v.trim().match(/\S+/g)||[]).length; $('#ttLines').textContent=(v===''?0:v.split(/\n/).length); });
-  const tf=$('#tfInput');
-  if(tf) $$('.tf-btn').forEach(b=> b.addEventListener('click', ()=>{ let v=tf.value; switch(b.dataset.tf){ case 'upper': v=v.toUpperCase(); break; case 'lower': v=v.toLowerCase(); break; case 'trim': v=v.replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim(); break; case 'noblank': v=v.split('\n').filter(l=>l.trim()!=='').join('\n'); break; case 'reverse': v=v.split('').reverse().join(''); break; } tf.value=v; toast('已应用：'+b.textContent); }));
-  const tsDate=$('#tsDate'), tsSec=$('#tsSec');
-  function tsFromDate(){ if(!tsDate||!tsSec||!tsDate.value) return; const d=new Date(tsDate.value); if(isNaN(d)) return; tsSec.value=Math.floor(d.getTime()/1000); $('#tsUtc').textContent=d.toISOString(); $('#tsLocal').textContent=d.toLocaleString(); }
-  function tsFromSec(){ if(!tsDate||!tsSec||!tsSec.value) return; const s=parseInt(tsSec.value,10); if(isNaN(s)) return; const d=new Date(s*1000); tsDate.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); $('#tsUtc').textContent=d.toISOString(); $('#tsLocal').textContent=d.toLocaleString(); }
-  if(tsDate){ tsDate.addEventListener('change', tsFromDate); tsSec.addEventListener('input', tsFromSec); const now=new Date(); const off=now.getTimezoneOffset(); const local=new Date(now.getTime()-off*60000); tsDate.value=local.toISOString().slice(0,16); tsFromDate(); }
-  const bmiH=$('#bmiH'), bmiW=$('#bmiW');
-  function calcBmi(){ if(!bmiH||!bmiW) return; const h=parseFloat(bmiH.value)/100, w=parseFloat(bmiW.value); if(!h||!w){ $('#bmiOut').textContent='—'; $('#bmiCat').textContent=''; return; } const bmi=w/(h*h); $('#bmiOut').textContent=bmi.toFixed(1); let cat='',col=''; if(bmi<18.5){cat='偏瘦';col='#2196F3';} else if(bmi<24){cat='正常';col='#4CAF50';} else if(bmi<28){cat='偏胖';col='#FF9800';} else {cat='肥胖';col='#F44336';} $('#bmiCat').textContent=cat; $('#bmiCat').style.color=col; }
-  if(bmiH){ bmiH.addEventListener('input',calcBmi); bmiW.addEventListener('input',calcBmi); calcBmi(); }
-  const cp=$('#cpInput'), cpHex=$('#cpHex'), cpRgb=$('#cpRgb');
-  function updCp(){ if(!cp) return; const hex=cp.value; cpHex.textContent=hex.toUpperCase(); const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16); cpRgb.textContent='rgb('+r+','+g+','+b+')'; $('#cpSwatch').style.background=hex; }
-  if(cp){ cp.addEventListener('input',updCp); updCp(); const cpCopy=$('#cpCopy'); if(cpCopy) cpCopy.addEventListener('click',()=>copyText(cpHex.textContent)); const cpEye=$('#cpEye'); if(cpEye){ if(window.EyeDropper){ cpEye.style.display=''; cpEye.addEventListener('click',async()=>{ try{ const ed=new EyeDropper(); const res=await ed.open(); cp.value=res.sRGBHex; updCp(); }catch(e){} }); } else { cpEye.style.display='none'; } } }
-  const sample=$('#typingSample') ? $('#typingSample').textContent : '';
-  const tInput=$('#typingInput'); let tStart=0;
-  function typingReset(){ tStart=0; if(tInput) tInput.value=''; $('#typingWpm').textContent='—'; $('#typingAcc').textContent='—'; }
-  if(tInput) tInput.addEventListener('input', ()=>{ if(!tStart) tStart=performance.now(); const typed=tInput.value; const el2=$('#typingWpm'); if(typed.length===0){ el2.textContent='—'; $('#typingAcc').textContent='—'; return; } const elapsed=(performance.now()-tStart)/60000; let correct=0; for(let i=0;i<typed.length;i++){ if(typed[i]===sample[i]) correct++; } const acc=correct/typed.length; const wpm=elapsed>0?(typed.length/5)/elapsed:0; el2.textContent=Math.round(wpm); $('#typingAcc').textContent=Math.round(acc*100)+'%'; if(typed.length>=sample.length) toast('完成！速度 '+Math.round(wpm)+' WPM，正确率 '+Math.round(acc*100)+'%'); });
-  const tReset=$('#typingReset'); if(tReset) tReset.addEventListener('click',typingReset);
-}
-
-let toolsGen = 0;
-initModule.tools = function(){
-  toolsGen++;
-  const myGen = toolsGen;
-  runCleanup('tools');
-  bindToolsUI();
-  Promise.all([getOgl(), getThree()]).then(function(res){
-    if (myGen !== toolsGen) return;          // 已被重渲染，丢弃过期结果
-    if (currentModule !== 'tools') return;
-    const ogl=res[0], three=res[1];
-    if (!ogl && !three){ ['fx-plasma','fx-plasmawave','fx-ferrofluid','fx-lightrays','fx-darkveil','fx-dither'].forEach(id=>{ const e=document.getElementById(id); if(e) e.innerHTML='<div class="fx-fallback">渲染库加载失败，请检查网络 😢</div>'; }); return; }
-    initFx(ogl, three);
-  });
-};
-
-function initFx(ogl, three){
-  function mount(id, fn){
-    const el=document.getElementById(id); if(!el) return;
-    let cleanup=null;
-    try { cleanup=fn(el); } catch(e){ console.warn('特效初始化失败:', id, e); }
-    if (cleanup) moduleCleanups.tools.push(cleanup);
-    else el.innerHTML='<div class="fx-fallback">该特效需要 WebGL，当前环境不可用 😢</div>';
-  }
-  if (ogl){
-    mount('fx-plasma', el => fxPlasma(ogl, el, { color:'#7C4DFF', speed:1.2 }));
-    mount('fx-plasmawave', el => fxPlasmaWave(ogl, el, { colors:['#7C4DFF','#06B6D4'] }));
-    mount('fx-ferrofluid', el => fxFerrofluid(ogl, el, { colors:['#80C3EA','#25637B','#ffffff'], flowDirection:'down' }));
-    mount('fx-lightrays', el => fxLightRays(ogl, el, { raysColor:'#ffffff', raysOrigin:'top-center', followMouse:true, mouseInfluence:0.12 }));
-    mount('fx-darkveil', el => fxDarkVeil(ogl, el, { hueShift:30, noiseIntensity:0.03, warpAmount:0.4 }));
-  } else {
-    ['fx-plasma','fx-plasmawave','fx-ferrofluid','fx-lightrays','fx-darkveil'].forEach(id=>{ const e=document.getElementById(id); if(e) e.innerHTML='<div class="fx-fallback">ogl 库加载失败 😢</div>'; });
-  }
-  if (three){
-    mount('fx-dither', el => fxDither(three, el, { waveColor:[0.49,0.30,0.77], colorNum:4, pixelSize:3 }));
-  } else {
-    const e=document.getElementById('fx-dither'); if(e) e.innerHTML='<div class="fx-fallback">three 库加载失败 😢</div>';
-  }
-}
+initModule.tools = function(){};
 
 // ===== Boot =====
 loadState();
