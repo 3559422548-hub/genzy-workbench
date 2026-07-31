@@ -2571,7 +2571,7 @@ renderers.home = function(){
     '<div class="card" id="homeAdvCard" style="cursor:pointer;padding:.7rem .9rem" onclick="switchModule(\'adventure\')">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">'+
         '<div style="font-weight:700;font-size:.88rem">🧭 像素冒险</div>'+
-        '<span class="pill accent">'+(state.adventure&&state.adventure.steps||0)+' 步</span>'+
+        '<span class="pill accent">'+(state.forest&&state.forest.total||0)+' 步</span>'+
       '</div>'+
       '<div class="adv-wrap" style="padding:0;max-height:200px"><div class="adv-grid" style="gap:1px">'+renderAdventureMap()+'</div></div>'+
     '</div>'+
@@ -3318,7 +3318,7 @@ function checkAdventureUnlocks(){
 advEnsureLandmarks(50);
 
 function renderAdventureMap(full){
-  var s = state.adventure && state.adventure.steps || 0;
+  var s = state.forest && state.forest.total || 0;
   var unlocked = state.adventure && state.adventure.unlocked || [];
   var totalCells = s; // 只显示已走过的格子（step < s）
   if(totalCells <= 0) return '';
@@ -3353,7 +3353,7 @@ function renderAdventureMap(full){
   return html;
 }
 renderers.adventure = function(){
-  var s = state.adventure&&state.adventure.steps||0;
+  var s = state.forest&&state.forest.total||0;
   var unlocked = state.adventure&&state.adventure.unlocked||[];
   var nextLm = null;
   for(var li=0;li<ADV_LANDMARKS.length;li++){
