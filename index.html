@@ -1132,8 +1132,15 @@ canvas { max-width:100%; border-radius: var(--radius-sm); background: #111; }
   padding: .35rem .75rem; border-radius: 8px;
   cursor:pointer; transition: background .15s, color .15s;
 }
-.segment button.active { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
-</style>
+.segment button.active { background: var(--card); color: var(--text);   box-shadow: var(--shadow); }
+
+/* ===== Uiverse 风格卡片（适配工作台） ===== */
+.ui-card{ border-radius:var(--radius); padding:1.1rem; background:var(--card); color:var(--text); box-shadow:var(--shadow); font-family:var(--body); }
+.ui-glass{ background:rgba(255,255,255,.14); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.28); }
+.ui-dark{ background:var(--card-dark); }
+.ui-grad{ background:linear-gradient(135deg, rgba(37,83,123,.20), rgba(128,195,234,.20)); border:1px solid rgba(37,83,123,.55); }
+.ui-lightglass{ background:rgba(248,249,250,.6); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(0,0,0,.08); }
+.ui-dash .ui-avatar{ width:52px; height:52px; border-radius:50%; background:var(--accent-soft); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:1.7rem; }
 </head>
 <body>
 <div id="overlay"></div>
@@ -3408,5 +3415,15 @@ function flushState(){
 window.addEventListener('beforeunload', function(){ clearTimeout(saveTimer); flushState(); });
 
 </script>
+
+<!-- ===== Uiverse 组件画廊（适配工作台） ===== -->
+<div class="ui-gallery" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;padding:1.5rem 0">
+  <div class="ui-card ui-glass"><div style="font-weight:600">玻璃拟态</div><div style="font-size:.8rem;color:var(--muted)">半透明磨砂面板</div></div>
+  <div class="ui-card ui-dark"><div style="font-weight:600">暗色卡片</div><div style="font-size:.8rem;color:var(--muted)">纯暗底内阴影</div></div>
+  <div class="ui-card ui-grad"><div style="font-weight:600">渐变卡片</div><div style="font-size:.8rem;color:var(--muted)">描边渐变光感</div></div>
+  <div class="ui-card ui-lightglass"><div style="font-weight:600">轻玻璃</div><div style="font-size:.8rem;color:var(--muted)">薄磨砂层</div></div>
+  <div class="ui-card ui-dash"><div class="ui-avatar">👤</div><div style="font-weight:600">仪表盘卡片</div><div style="font-size:.8rem;color:var(--muted)">带头像的资料卡</div></div>
+</div>
+
 </body>
 </html>
