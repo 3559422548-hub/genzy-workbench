@@ -981,7 +981,8 @@ const MODULES = [
   {id:'diary', label:'记日记天', icon:'📔'},
   {id:'news', label:'今日要闻', icon:'📰'},
   {id:'books', label:'书香书屋', icon:'📚'},
-  {id:'timers', label:'计时记日', icon:'⏱️'}
+  {id:'timers', label:'计时记日', icon:'⏱️'},
+  {id:'musicTheory', label:'乐理学习', icon:'🎵'}
 ];
 
 function initNav(){
@@ -2039,94 +2040,162 @@ const STYLE_GUIDES = {
   'rock':'Rock：强力和弦、失真吉他、贝斯与鼓锁紧，Verse 轻 Chorus 重，桥段做动态对比。',
   'lo-fi hip-hop':'Lo-fi Hip-hop：简单和弦 loop、爵士采样、鼓组 swing、 vinyl crackle/雨声营造氛围。'
 };
-// ===== Books: recommendations & search (Gutendex / Project Gutenberg) =====
+// ===== Books: recommendations & search (SoBooks) =====
 const BOOK_GENRES = [
-  {label:'文学小说', topic:'fiction'},
-  {label:'科幻', topic:'science'},
-  {label:'奇幻', topic:'fantasy'},
-  {label:'悬疑推理', topic:'mystery'},
-  {label:'历史', topic:'history'},
-  {label:'哲学', topic:'philosophy'},
-  {label:'传记', topic:'biography'},
-  {label:'诗歌', topic:'poetry'},
-  {label:'冒险', topic:'adventure'},
-  {label:'恐怖', topic:'horror'},
-  {label:'爱情', topic:'romance'},
-  {label:'儿童', topic:'children'},
-  {label:'科学', topic:'science'},
-  {label:'戏剧', topic:'drama'},
-  {label:'喜剧', topic:'comedy'}
+  {label:'小说文学', cat:7},
+  {label:'人文社科', cat:2},
+  {label:'历史传记', cat:5},
+  {label:'经济管理', cat:9},
+  {label:'励志成功', cat:4},
+  {label:'学习教育', cat:6},
+  {label:'漫画绘本', cat:10},
+  {label:'生活时尚', cat:8},
+  {label:'科幻', cat:7, keyword:'科幻'},
+  {label:'悬疑推理', cat:7, keyword:'悬疑'},
+  {label:'哲学', cat:2, keyword:'哲学'},
+  {label:'诗歌', cat:7, keyword:'诗歌'},
+  {label:'恐怖', cat:7, keyword:'恐怖'},
+  {label:'爱情', cat:7, keyword:'爱情'},
+  {label:'儿童', cat:10, keyword:'儿童'}
 ];
 const BOOK_MOODS = [
-  {label:'放松', boost:['poetry','fiction','biography']},
-  {label:'充电学习', boost:['science','philosophy','history','biography']},
-  {label:'治愈', boost:['poetry','fiction','children']},
-  {label:'烧脑', boost:['mystery','science fiction','drama']},
-  {label:'催眠', boost:['philosophy','history','science']}
+  {label:'放松', boost:[7, 10]},
+  {label:'充电学习', boost:[2, 5, 6]},
+  {label:'治愈', boost:[7, 10]},
+  {label:'烧脑', boost:[7, 2]},
+  {label:'催眠', boost:[2, 5]}
 ];
-const BOOK_LANGS = ['中文','英文原著'];
+const BOOK_LANGS = ['全部'];
 
-async function fetchGutendex(opts){
-  var base = 'https://gutendex.com/books/?';
-  var p = [];
-  if(opts.q) p.push('search=' + encodeURIComponent(opts.q));
-  if(opts.topic) p.push('topic=' + encodeURIComponent(opts.topic));
-  if(opts.page) p.push('page=' + opts.page);
-  try {
-    var res = await fetch(base + p.join('&'));
-    if(!res.ok) throw new Error('fail');
-    return await res.json();
-  } catch(e){ return {results:[]}; }
+// SoBooks API 基础配置
+const SOBooks_BASE = 'https://sobooks.cc/wp-json/wp/v2';
+const SOBooks_CATS = {
+  2: '人文社科', 4: '励志成功', 5: '历史传记', 6: '学习教育',
+  7: '小说文学', 8: '生活时尚', 9: '经济管理', 10: '漫画绘本'
+};
+
+// 从 excerpt 中提取纯文本摘要
+function extractSummary(excerpt){
+  if(!excerpt) return '';
+  var text = excerpt.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  // 去掉开头的"内容简介"等字样
+  text = text.replace(/^内容简介\s*[·•]?\s*/, '');
+  return text;
 }
-// Gutendex 的 search 参数不支持含空格的词（即使编码也会 404），需拆成单 token
-function gutendexQuery(raw){
-  if(!raw) return '';
-  return String(raw).trim().split(/\s+/)[0]; // 取首个词，避免空格导致 404
+
+// 从 content 中提取作者信息
+function extractAuthor(content){
+  if(!content) return '';
+  var m = content.match(/作者简介[\s\S]*?<p[^>]*>([^<]+)</);
+  if(m && m[1]){
+    var name = m[1].replace(/，.*/, '').trim();
+    if(name.length < 20) return name;
+  }
+  return '';
 }
-async function fetchOpenLibrary(q){
+
+// 搜索图书
+async function fetchSobooksSearch(q, page){
   try {
-    var url = 'https://openlibrary.org/search.json?q=' + encodeURIComponent(q) + '&limit=12&fields=title,author_name,first_publish_year,cover_i,key,subject';
-    var res = await fetch(url, {headers:{'User-Agent':'genzy/1.0'}});
+    var url = SOBooks_BASE + '/posts?search=' + encodeURIComponent(q) +
+              '&per_page=15&page=' + (page||1) +
+              '&_fields=id,title,excerpt,link,categories,tags,featured_media';
+    var res = await fetch(url);
     if(!res.ok) throw new Error('fail');
-    var d = await res.json();
-    return (d.docs||[]).map(function(x){
+    var data = await res.json();
+    return (data||[]).map(function(p){
       return {
-        id: 'ol-' + (x.key||'').replace(/\W/g,''),
-        title: x.title,
-        authors: (x.author_name||[]).map(function(n){ return {name:n}; }),
-        year: x.first_publish_year,
-        subjects: (x.subject||[]).slice(0,3),
-        cover: x.cover_i ? 'https://covers.openlibrary.org/b/id/' + x.cover_i + '-M.jpg' : null,
-        olKey: x.key,
-        epub: 'https://openlibrary.org' + x.key,
-        external: true
+        id: 'sb-' + p.id,
+        title: p.title ? p.title.rendered : '',
+        summary: extractSummary(p.excerpt ? p.excerpt.rendered : ''),
+        link: p.link,
+        categories: (p.categories||[]).map(function(c){ return SOBooks_CATS[c] || ''; }).filter(Boolean),
+        cover: null,
+        external: true,
+        sobooks: true
+      };
+    });
+  } catch(e){ return []; }
+}
+
+// 按分类获取图书（用于推荐）
+async function fetchSobooksByCategory(catId, page){
+  try {
+    var url = SOBooks_BASE + '/posts?categories=' + catId +
+              '&per_page=10&page=' + (page||1) +
+              '&_fields=id,title,excerpt,link,categories,tags,featured_media';
+    var res = await fetch(url);
+    if(!res.ok) throw new Error('fail');
+    var data = await res.json();
+    return (data||[]).map(function(p){
+      return {
+        id: 'sb-' + p.id,
+        title: p.title ? p.title.rendered : '',
+        summary: extractSummary(p.excerpt ? p.excerpt.rendered : ''),
+        link: p.link,
+        categories: (p.categories||[]).map(function(c){ return SOBooks_CATS[c] || ''; }).filter(Boolean),
+        cover: null,
+        external: true,
+        sobooks: true
       };
     });
   } catch(e){ return []; }
 }
 function bookCover(b){
+  if(b.sobooks) return null; // SoBooks 列表暂无封面图，使用默认图标
   if(b.external){ return b.cover; }
   var f = b.formats || {};
   return f['image/jpeg'] || null;
 }
 function renderBookCard(b){
   var cover = bookCover(b);
-  var author = (b.authors && b.authors[0]) ? b.authors.map(function(a){ return a.name; }).join(', ') : '佚名';
-  var year = b.year ? ' · ' + b.year : '';
-  var epub = b.external ? b.epub : (b.formats && b.formats['application/epub+zip']);
-  var summary = b.external ? '' : ((b.summaries && b.summaries[0]) ? b.summaries[0] : '');
+  var author = '';
+  var year = '';
+  var summary = '';
+  var tags = [];
+  var detailUrl = '';
+  var downloadUrl = '';
+  var downloadLabel = '下载';
+
+  if(b.sobooks){
+    // SoBooks 数据
+    author = ''; // 列表接口暂无作者信息
+    summary = b.summary || '';
+    tags = b.categories || [];
+    detailUrl = b.link;
+    downloadUrl = b.link;
+    downloadLabel = '去下载';
+  } else if(b.external){
+    author = (b.authors && b.authors[0]) ? b.authors.map(function(a){ return a.name; }).join(', ') : '佚名';
+    year = b.year ? ' · ' + b.year : '';
+    summary = '';
+    tags = b.subjects || [];
+    detailUrl = b.epub;
+    downloadUrl = b.epub;
+    downloadLabel = '在线阅读';
+  } else {
+    author = (b.authors && b.authors[0]) ? b.authors.map(function(a){ return a.name; }).join(', ') : '佚名';
+    year = b.year ? ' · ' + b.year : '';
+    summary = (b.summaries && b.summaries[0]) ? b.summaries[0] : '';
+    tags = b.subjects || [];
+    detailUrl = 'https://gutendex.com/books/'+b.id+'/';
+    downloadUrl = b.formats && b.formats['application/epub+zip'];
+    downloadLabel = 'EPUB';
+  }
+
   if(summary && summary.length>150) summary = summary.slice(0,150) + '…';
-  var tags = (b.subjects||[]).slice(0,3).map(function(s){ return '<span class="book-tag">'+escapeHtml(String(s).slice(0,12))+'</span>'; }).join('');
+  var tagsHtml = tags.slice(0,3).map(function(s){ return '<span class="book-tag">'+escapeHtml(String(s).slice(0,12))+'</span>'; }).join('');
   var coverHtml = '<div class="book-cover" id="bc_'+b.id+'">' + (cover ? '<img src="'+escapeHtml(cover)+'" loading="lazy" onerror="this.parentNode.textContent=\'📖\'">' : '📖') + '</div>';
+
   return '<div class="book-rec-card">' + coverHtml +
     '<div class="book-meta">' +
       '<div class="book-title">'+escapeHtml(b.title)+'</div>' +
-      '<div class="book-author">'+escapeHtml(author)+year+'</div>' +
+      (author ? '<div class="book-author">'+escapeHtml(author)+year+'</div>' : '') +
       (summary ? '<div class="book-summary">'+escapeHtml(summary)+'</div>' : '') +
-      (tags ? '<div class="book-tags">'+tags+'</div>' : '') +
+      (tagsHtml ? '<div class="book-tags">'+tagsHtml+'</div>' : '') +
       '<div class="book-actions">' +
-        (epub ? '<a class="btn btn-sm" href="'+escapeHtml(epub)+'" target="_blank" rel="noopener">⬇ '+ (b.external?'在线阅读':'EPUB') +'</a>' : '') +
-        '<a class="btn btn-sm secondary" href="'+(b.external ? escapeHtml(b.epub) : 'https://gutendex.com/books/'+b.id+'/')+'" target="_blank" rel="noopener">详情</a>' +
+        (downloadUrl ? '<a class="btn btn-sm" href="'+escapeHtml(downloadUrl)+'" target="_blank" rel="noopener">⬇ '+downloadLabel+'</a>' : '') +
+        '<a class="btn btn-sm secondary" href="'+escapeHtml(detailUrl)+'" target="_blank" rel="noopener">详情</a>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -2135,32 +2204,32 @@ function dayOfYear(){
   var now = new Date(); var start = new Date(now.getFullYear(),0,0);
   return Math.floor((now - start)/86400000);
 }
-function bookTopicsFromPrefs(){
+function bookCategoriesFromPrefs(){
   var prefs = state.books.prefs || {genres:[], moods:[], langs:[]};
-  var topics = [];
-  (prefs.genres||[]).forEach(function(g){ var x = BOOK_GENRES.find(function(y){ return y.label===g; }); if(x) topics.push(x.topic); });
-  (prefs.moods||[]).forEach(function(m){ var x = BOOK_MOODS.find(function(y){ return y.label===m; }); if(x) x.boost.forEach(function(t){ if(topics.indexOf(t)<0) topics.push(t); }); });
-  if(topics.length===0) topics = ['fiction','history','adventure','science','philosophy'];
-  return topics;
+  var cats = [];
+  (prefs.genres||[]).forEach(function(g){
+    var x = BOOK_GENRES.find(function(y){ return y.label===g; });
+    if(x && cats.indexOf(x.cat)<0) cats.push(x.cat);
+  });
+  (prefs.moods||[]).forEach(function(m){
+    var x = BOOK_MOODS.find(function(y){ return y.label===m; });
+    if(x) x.boost.forEach(function(c){ if(cats.indexOf(c)<0) cats.push(c); });
+  });
+  if(cats.length===0) cats = [7, 5, 2, 9]; // 默认：小说文学、历史传记、人文社科、经济管理
+  return cats;
 }
 async function loadDailyRecs(){
   var prefs = state.books.prefs || {genres:[], moods:[], langs:[]};
-  var langs = prefs.langs || [];
-  var topics = bookTopicsFromPrefs();
+  var cats = bookCategoriesFromPrefs();
   var daySeed = dayOfYear();
   var collected = [];
-  // Pick up to 3 topics, vary page by day for daily freshness
-  var picks = topics.slice(0, 3);
+  // Pick up to 3 categories, vary page by day for daily freshness
+  var picks = cats.slice(0, 3);
   for(var i=0;i<picks.length;i++){
-    var data = await fetchGutendex({topic: picks[i], page: (daySeed + i*3) % 25 + 1});
-    if(data.results && data.results.length){
-      collected = collected.concat(data.results.slice(0,5));
+    var books = await fetchSobooksByCategory(picks[i], (daySeed + i*2) % 10 + 1);
+    if(books && books.length){
+      collected = collected.concat(books.slice(0,5));
     }
-  }
-  // Chinese best-effort via Open Library
-  if(langs.indexOf('中文')>=0 && prefs.genres && prefs.genres.length){
-    var cn = await fetchOpenLibrary(prefs.genres[0]);
-    collected = collected.concat(cn);
   }
   var seen = {}; collected = collected.filter(function(b){ if(seen[b.id]) return false; seen[b.id]=1; return true; });
   var cont = document.getElementById('bookRecs');
@@ -2177,12 +2246,7 @@ async function runBookSearch(q){
   if(!cont) return;
   if(!q){ cont.innerHTML = ''; return; }
   cont.innerHTML = '<div class="empty">搜索中…</div>';
-  var data = await fetchGutendex({q: gutendexQuery(q), page:1});
-  var ol = [];
-  // Open Library 能处理中文与多词，作为补充来源（失败则静默忽略）
-  ol = await fetchOpenLibrary(q);
-  var results = (data.results||[]).concat(ol);
-  var seen={}; results = results.filter(function(b){ if(seen[b.id]) return false; seen[b.id]=1; return true; });
+  var results = await fetchSobooksSearch(q, 1);
   if(results.length){
     cont.innerHTML = results.slice(0,15).map(renderBookCard).join('');
   } else {
@@ -2197,7 +2261,7 @@ renderers.books = function(){
   return '<div class="card">' +
     '<div class="card-title">📖 打开 iBooks</div>' +
     '<a href="ibooks://" class="btn btn-block" style="margin-bottom:.3rem">打开 iPhone 图书 App</a>' +
-    '<div class="card-subtitle">从 Z-Library 下载的 epub 可在 iBooks 中打开阅读。</div>' +
+    '<div class="card-subtitle">从 SoBooks 下载的电子书可在 iBooks 中打开阅读。</div>' +
   '</div>' +
   '<div class="card">' +
     '<div class="card-title">⏱️ 阅读计划 & 计时器</div>' +
@@ -2228,7 +2292,7 @@ renderers.books = function(){
   '<div class="card">' +
     '<div class="book-sec-title">🌟 为你推荐</div>' +
     '<div id="bookRecs"><div class="empty">点击上方「生成今日推荐」获取书单</div></div>' +
-    '<div class="book-src-note">数据来源：Project Gutenberg（古登堡计划）· 免费公版书，含 EPUB 直链</div>' +
+    '<div class="book-src-note">数据来源：SoBooks · 免费电子书资源，含 EPUB/MOBI/AZW3 等格式</div>' +
   '</div>' +
   '<div class="card">' +
     '<div class="book-sec-title">🔍 搜书</div>' +
@@ -2855,6 +2919,30 @@ initModule.news = function(){
   var btn = document.getElementById('idailyOpenBtn');
   if(btn) btn.addEventListener('click', function(){
     openApp('shortcuts://run-shortcut?name=iDaily', 'https://apps.apple.com/cn/app/idaily-%E6%AF%8F%E6%97%A5%E7%8E%AF%E7%90%83%E8%A7%86%E9%87%8E/id488528128');
+  });
+};
+
+// ===== Music Theory =====
+renderers.musicTheory = function(){
+  return '<div class="card" style="text-align:center;padding:1.5rem 1rem;background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff">' +
+    '<div style="font-size:3rem;margin-bottom:.3rem">🎵</div>' +
+    '<div style="font-size:1.2rem;font-weight:700;margin-bottom:.5rem">乐理学习</div>' +
+    '<div class="card-subtitle" style="color:#aaa;margin-bottom:.8rem">音阶、和弦、节奏、识谱 — 互动式乐理练习，从入门到精通。</div>' +
+    '<button class="btn btn-block btn-lg" id="musicTheoryOpenBtn" style="margin-bottom:.3rem;background:#e94560;color:#fff">🔗 打开 Musicca 乐理练习</button>' +
+    '<div style="font-size:.72rem;color:#888;margin-top:.5rem">将跳转至 musicca.com 进行线上互动乐理训练</div>' +
+  '</div>';
+};
+initModule.musicTheory = function(){
+  var btn = document.getElementById('musicTheoryOpenBtn');
+  if(btn) btn.addEventListener('click', function(){
+    window.open('https://www.musicca.com/zh/exercises', '_blank', 'noopener');
+  });
+  // 也支持点击卡片任意位置跳转
+  var card = btn && btn.closest('.card');
+  if(card) card.addEventListener('click', function(e){
+    if(e.target.tagName !== 'BUTTON') {
+      window.open('https://www.musicca.com/zh/exercises', '_blank', 'noopener');
+    }
   });
 };
 
