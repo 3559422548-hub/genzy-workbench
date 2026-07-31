@@ -915,7 +915,7 @@ const Storage = {
 };
 
 // ===== State =====
-const todayStr = () => new Date().toISOString().slice(0,10);
+const todayStr = () => new Date().toLocaleDateString('en-CA', {timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, year:'numeric', month:'2-digit', day:'2-digit'});
 const uid = () => Math.random().toString(36).slice(2,10);
 const fmtDate = (d) => new Date(d).toLocaleDateString('zh-CN', {month:'short', day:'numeric', weekday:'short'});
 const CHECK_SVG = '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
