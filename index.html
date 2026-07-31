@@ -203,6 +203,7 @@ button, input, select, textarea {
   padding: .9rem 1rem;
   margin-bottom: .7rem;
   border: 1px solid var(--border);
+  transition: transform .2s ease, box-shadow .2s ease;
 }
 .card-dark {
   background: var(--card-dark);
@@ -1200,6 +1201,22 @@ canvas { max-width:100%; border-radius: var(--radius-sm); background: #111; }
     background: #353c4f;
   }
 }
+
+/* 卡片悬停动画（与首页天气卡片一致）：上移 + 浮起阴影。
+   用 [class*="mod-"] 提升特异性，确保 hover 阴影能盖过各模块风格设置的 box-shadow */
+[class*="mod-"] .card:not(.card-dark):hover,
+[class*="mod-"] .wx-wrap:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(37,83,123,0.15);
+}
+[class*="mod-"] .card:not(.card-dark):active { transform: scale(.99); }
+
+/* 桌面端适配：内容区随屏增大、尽量铺满，网格卡片随之拉伸 */
+@media (min-width: 900px)  { #main { max-width: 860px; } }
+@media (min-width: 1100px) { #main { max-width: 1040px; } }
+@media (min-width: 1300px) { #main { max-width: 1240px; } }
+@media (min-width: 1600px) { #main { max-width: 1480px; } }
+
 </style>
 </head>
 <body>
