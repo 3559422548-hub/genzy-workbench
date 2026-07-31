@@ -1134,13 +1134,54 @@ canvas { max-width:100%; border-radius: var(--radius-sm); background: #111; }
 }
 .segment button.active { background: var(--card); color: var(--text);   box-shadow: var(--shadow); }
 
-/* ===== Uiverse 风格卡片（适配工作台） ===== */
-.ui-card{ border-radius:var(--radius); padding:1.1rem; background:var(--card); color:var(--text); box-shadow:var(--shadow); font-family:var(--body); }
-.ui-glass{ background:rgba(255,255,255,.14); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.28); }
-.ui-dark{ background:var(--card-dark); }
-.ui-grad{ background:linear-gradient(135deg, rgba(37,83,123,.20), rgba(128,195,234,.20)); border:1px solid rgba(37,83,123,.55); }
-.ui-lightglass{ background:rgba(248,249,250,.6); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(0,0,0,.08); }
-.ui-dash .ui-avatar{ width:52px; height:52px; border-radius:50%; background:var(--accent-soft); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:1.7rem; }
+/* ===== 模块卡片风格（Uiverse 适配，按模块作用域应用） ===== */
+/* 玻璃拟态：浮层氛围感 —— 天气、首页 */
+.mod-weather .wx-wrap,
+.mod-weather .card,
+.mod-home .card {
+  background: rgba(255,255,255,.14);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.28);
+  box-shadow: var(--shadow-dark);
+}
+/* 轻玻璃：清晰薄磨砂 —— 列表 / 表单类模块 */
+.mod-daily .card,
+.mod-homework .card,
+.mod-books .card,
+.mod-bills .card,
+.mod-collections .card {
+  background: rgba(248,249,250,.6);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(0,0,0,.08);
+}
+/* 渐变卡片：Galaxy 蓝绿高光 —— 强调 / 入口类模块 */
+.mod-anniversary .card,
+.mod-musicTheory .card,
+.mod-english .card {
+  background: linear-gradient(135deg, rgba(37,83,123,.20), rgba(128,195,234,.20));
+  border: 1px solid rgba(37,83,123,.55);
+  box-shadow: var(--shadow-dark);
+}
+/* 暗色卡片：沉浸专注 —— 专注 / 沉浸类模块（固定深色，亮暗模式一致） */
+.mod-pomodoro .card,
+.mod-adventure .card,
+.mod-moodDiary .card,
+.mod-kitchen .card,
+.mod-habits .card,
+.mod-bottle .card {
+  background: #2c3143;
+  color: #f0f2f5;
+  border-color: rgba(255,255,255,.06);
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
+.mod-pomodoro .muted,
+.mod-adventure .muted,
+.mod-moodDiary .muted,
+.mod-kitchen .muted,
+.mod-habits .muted,
+.mod-bottle .muted { color: rgba(255,255,255,.6); }
 </style>
 </head>
 <body>
@@ -1351,6 +1392,7 @@ function switchModule(id){
 var renderContent = (function(orig){
   return function(){ clearTimeout(window._renderTimer); window._renderTimer = setTimeout(orig, 130); };
 })(function(){
+  $('#content').className = 'mod-' + currentModule;
   $('#content').innerHTML = renderers[currentModule] ? renderers[currentModule]() : `<div class="card">模块建设中</div>`;
   if (initModule[currentModule]) initModule[currentModule]();
   checkHabits();
@@ -3416,15 +3458,6 @@ function flushState(){
 window.addEventListener('beforeunload', function(){ clearTimeout(saveTimer); flushState(); });
 
 </script>
-
-<!-- ===== Uiverse 组件画廊（适配工作台） ===== -->
-<div class="ui-gallery" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;padding:1.5rem 0">
-  <div class="ui-card ui-glass"><div style="font-weight:600">玻璃拟态</div><div style="font-size:.8rem;color:var(--muted)">半透明磨砂面板</div></div>
-  <div class="ui-card ui-dark"><div style="font-weight:600">暗色卡片</div><div style="font-size:.8rem;color:var(--muted)">纯暗底内阴影</div></div>
-  <div class="ui-card ui-grad"><div style="font-weight:600">渐变卡片</div><div style="font-size:.8rem;color:var(--muted)">描边渐变光感</div></div>
-  <div class="ui-card ui-lightglass"><div style="font-weight:600">轻玻璃</div><div style="font-size:.8rem;color:var(--muted)">薄磨砂层</div></div>
-  <div class="ui-card ui-dash"><div class="ui-avatar">👤</div><div style="font-weight:600">仪表盘卡片</div><div style="font-size:.8rem;color:var(--muted)">带头像的资料卡</div></div>
-</div>
 
 </body>
 </html>
