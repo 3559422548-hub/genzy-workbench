@@ -297,6 +297,14 @@ button, input, select, textarea {
 .btn-trash svg path { fill:#fff; }
 .btn-trash .bin-top { transform-origin:bottom right; }
 .btn-trash:hover .bin-top { transition:transform .5s; transform:rotate(160deg); }
+.btn-ico {
+  width: 36px; height: 36px; border-radius: 50%; padding:0; display:inline-flex;
+  align-items:center; justify-content:center; border:none; cursor:pointer; font-size:1rem;
+  background: var(--card-2); color: var(--text); transition: background .3s, transform .15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12); position:relative; flex-shrink:0;
+}
+.btn-ico:hover { background: var(--accent); color:#fff; }
+.btn-ico:active { transform:scale(.92); }
 .btn.success { background: var(--success); color: #fff; border-color: transparent; }
 .btn.warning { background: var(--warning); color: #fff; border-color: transparent; }
 .btn.ghost { background: transparent; color: var(--accent); border-color: transparent; }
@@ -2183,7 +2191,7 @@ function initTimer(idSuffix, onDone){
   const update = ()=>{
     const now = Date.now();
     const delta = (now - last)/1000; last = now;
-    if (mode==='countdown') { remaining -= delta; if (remaining<=0){ remaining=0; stopTick('timer'+idSuffix); if(onDone) onDone(); toast('计时结束'); } setFlipClock(idSuffix, remaining); }
+    if (mode==='countdown') { remaining -= delta; if (remaining<=0){ remaining=0; stopTick('timer'+idSuffix); if(onDone) onDone(); toast('⏰ 计时结束：倒计时完成'); } setFlipClock(idSuffix, remaining); }
     else if (mode==='countup') { elapsed += delta; setFlipClock(idSuffix, elapsed); }
   };
   const startCountdown = ()=>{
@@ -2820,7 +2828,7 @@ initModule.pomodoro = function(){
   var mode=''; var remaining=0, elapsed=0, last=0;
   var update = function(){
     var now = Date.now(); var d = (now-last)/1000; last = now;
-    if(mode==='countdown'){ remaining -= d; if(remaining<=0){ remaining=0; stopTick('timerPomo'); toast('⏰ 计时结束'); } setFlipClock('pomo', remaining); }
+    if(mode==='countdown'){ remaining -= d; if(remaining<=0){ remaining=0; stopTick('timerPomo'); toast('⏰ 番茄钟结束：休息一下吧'); } setFlipClock('pomo', remaining); }
     else if(mode==='countup'){ elapsed += d; setFlipClock('pomo', elapsed); }
   };
   $('#pStartC').addEventListener('click', function(){
@@ -3356,6 +3364,76 @@ function checkHabits(){
   if(changed) saveState();
 }
 
+// ===== 导出到 Apple 日历 / 时钟（.ics，纯前端）=====
+// 生成 iCalendar 事件：按重复规则每天/工作日/自定义日出现，并用 VALARM 的
+// DURATION+REPEAT 在时段内按习惯间隔重复响铃，导入 Apple 日历后即系统提醒（锁屏也响）。
+function icsEscape(s){ return String(s).replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\r?\n/g,'\\n'); }
+function icsPad(n){ return (n<10?'0':'')+n; }
+var ICS_BYDAY = ['SU','MO','TU','WE','TH','FR','SA'];
+function nextHabitStart(h){
+  var st = (h.startTime || '09:00').split(':'); var H=+st[0], M=+st[1];
+  var rec = h.recurrence || 'daily';
+  var base = new Date();
+  for (var i=0;i<14;i++){
+    var cand = new Date(base.getFullYear(), base.getMonth(), base.getDate()+i, H, M, 0, 0);
+    if (cand.getTime() < Date.now()) continue;
+    var dow = cand.getDay();
+    if (rec==='weekdays' && (dow===0||dow===6)) continue;
+    if (rec==='custom' && (!h.weekdays || !h.weekdays.includes(dow))) continue;
+    return cand;
+  }
+  return new Date(base.getFullYear(), base.getMonth(), base.getDate(), H, M, 0, 0);
+}
+function habitVevent(h){
+  var start = nextHabitStart(h);
+  var dt = start.getFullYear()+icsPad(start.getMonth()+1)+icsPad(start.getDate())+'T'+icsPad(start.getHours())+icsPad(start.getMinutes())+'00';
+  var stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/, 'Z');
+  var rec = h.recurrence || 'daily';
+  var rrule;
+  if (rec==='weekdays') rrule = 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
+  else if (rec==='custom') rrule = 'FREQ=WEEKLY;BYDAY=' + (h.weekdays||[]).map(function(x){ return ICS_BYDAY[x]; }).join(',');
+  else rrule = 'FREQ=DAILY';
+  var intervalMin = (h.interval || 30) * (h.unit==='hours' ? 60 : 1);
+  var st2 = (h.startTime||'00:00').split(':').map(Number), et2 = (h.endTime||'23:59').split(':').map(Number);
+  var windowMin = Math.max(intervalMin, (et2[0]*60+et2[1]) - (st2[0]*60+st2[1]));
+  var repeats = Math.max(1, Math.floor(windowMin / intervalMin));
+  var name = h.name || '习惯';
+  return 'BEGIN:VEVENT\r\n'+
+    'UID:'+(h.id||uid())+'@genzy\r\n'+
+    'DTSTAMP:'+stamp+'\r\n'+
+    'DTSTART:'+dt+'\r\n'+
+    'SUMMARY:'+icsEscape('习惯：'+name)+'\r\n'+
+    'RRULE:'+rrule+'\r\n'+
+    'BEGIN:VALARM\r\n'+
+    'TRIGGER:-PT0M\r\n'+
+    'ACTION:DISPLAY\r\n'+
+    'DESCRIPTION:'+icsEscape('该「'+name+'」啦')+'\r\n'+
+    'DURATION:PT'+intervalMin+'M\r\n'+
+    'REPEAT:'+repeats+'\r\n'+
+    'END:VALARM\r\n'+
+    'END:VEVENT';
+}
+function wrapICS(vevents){
+  return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Genzy Workbench//Habit//CN\r\nCALSCALE:GREGORIAN\r\n'+
+    vevents+'\r\nEND:VCALENDAR';
+}
+function buildHabitICS(h){ return wrapICS(habitVevent(h)); }
+function buildAllHabitsICS(){
+  var items = (state.habits && state.habits.items || []).filter(function(h){ return h.enabled; });
+  if (!items.length) return null;
+  return wrapICS(items.map(habitVevent).join('\r\n'));
+}
+function downloadICS(filename, content){
+  try {
+    var blob = new Blob([content], { type:'text/calendar;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    toast('已生成日历文件，导入 Apple 日历即可 ⏰');
+  } catch(e){ toast('导出失败：'+e.message); }
+}
+
 renderers.habits = function(){
   var items = state.habits && state.habits.items || [];
   var listHtml = items.length ? items.map(function(h){
@@ -3371,7 +3449,10 @@ renderers.habits = function(){
       '</div>'+
       '<div class="item-actions" style="flex:1 1 100%;display:flex;align-items:center;justify-content:space-between;margin-top:.5rem">'+
         '<input type="checkbox" id="hbToggle-'+h.id+'" class="theme-checkbox hbToggle" data-id="'+h.id+'"'+(h.enabled?' checked':'')+'>'+
-        '<button class="btn-trash hbDel" data-id="'+h.id+'">'+TRASH_SVG+'</button>'+
+        '<div style="display:flex;gap:.4rem">'+
+          '<button class="btn-ico hbCal" data-id="'+h.id+'" title="添加到 Apple 日历 / 时钟">📅</button>'+
+          '<button class="btn-trash hbDel" data-id="'+h.id+'">'+TRASH_SVG+'</button>'+
+        '</div>'+
       '</div></div>';
   }).join('') : '<div class="empty"><div class="ico">✅</div>还没有习惯，添加一个吧</div>';
 
@@ -3400,6 +3481,9 @@ renderers.habits = function(){
         '</div>'+
       '</div>'+
       '<button class="btn btn-block" id="hbAdd">添加习惯</button>'+
+      '<button class="btn btn-block secondary" id="hbExportAll" style="margin-top:.6rem">📅 全部导出到 Apple 日历</button>'+
+      '<button class="btn btn-block" id="hbWebcal" style="margin-top:.5rem">🔄 更新日历订阅(webcal)</button>'+
+      '<div id="hbWebcalWrap" style="display:none;margin-top:.6rem;font-size:.78rem;color:var(--muted);line-height:1.4">Apple 日历里选「其他›添加订阅日历」，粘贴：<br><code id="hbWebcalUrl" style="word-break:break-all;color:var(--text)"></code> <button class="btn btn-sm" id="hbCopyCal">复制</button></div>'+
     '</div>'+
     '<div class="card">'+
       '<div class="card-title"><span class="ttl">📋 我的习惯</span><span class="pill accent">'+items.length+'</span></div>'+
@@ -3443,7 +3527,7 @@ initModule.habits = function(){
       id: uid(), name: name, interval: interval, unit: unit,
       startTime: startTime, endTime: endTime,
       recurrence: hbRec, weekdays: hbRec==='custom' ? Array.from(hbWd).sort() : [],
-      enabled: true, lastTriggered: 0
+      enabled: true, lastTriggered: 0, notifyLast: 0
     });
     saveState(); renderContent(); toast('习惯已添加 ✅');
   });
@@ -3459,6 +3543,39 @@ initModule.habits = function(){
       state.habits.items = (state.habits.items||[]).filter(function(x){ return x.id !== b.dataset.id; });
       saveState(); renderContent(); toast('习惯已删除');
     });
+  });
+  $$('.hbCal').forEach(function(b){
+    b.addEventListener('click', function(){
+      var h = (state.habits.items||[]).find(function(x){ return x.id === b.dataset.id; });
+      if (h) downloadICS('habit-' + (h.name||'habit') + '.ics', buildHabitICS(h));
+    });
+  });
+  var hbExa = $('#hbExportAll');
+  if (hbExa) hbExa.addEventListener('click', function(){
+    var ics = buildAllHabitsICS();
+    if (ics) downloadICS('genzy-habits.ics', ics);
+    else toast('还没有启用的习惯');
+  });
+  var hbWc = $('#hbWebcal');
+  if (hbWc) hbWc.addEventListener('click', function(){
+    var ics = buildAllHabitsICS();
+    if (!ics) { toast('还没有启用的习惯'); return; }
+    fetch('/api/ics', { method:'POST', headers:{ 'Content-Type':'text/calendar' }, body: ics })
+      .then(function(r){ return r.ok ? r.text() : Promise.reject(new Error('HTTP '+r.status)); })
+      .then(function(){
+        var url = 'webcal://' + location.host + '/habits.ics';
+        var wrap = document.getElementById('hbWebcalWrap');
+        var u = document.getElementById('hbWebcalUrl');
+        if (wrap) wrap.style.display = 'block';
+        if (u) u.textContent = url;
+        toast('日历订阅已更新，去 Apple 日历粘贴链接即可 ⏰');
+      })
+      .catch(function(e){ toast('更新失败：'+e.message+'（用「全部导出」仍可用）'); });
+  });
+  var hbCopy = $('#hbCopyCal');
+  if (hbCopy) hbCopy.addEventListener('click', function(){
+    var u = document.getElementById('hbWebcalUrl');
+    if (u && navigator.clipboard) navigator.clipboard.writeText(u.textContent).then(function(){ toast('已复制'); }).catch(function(){});
   });
 };
 
