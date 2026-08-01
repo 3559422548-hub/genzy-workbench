@@ -68,6 +68,7 @@
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { font-size: clamp(14px, 0.5vw + 13px, 17px); -webkit-text-size-adjust: 100%; }
 html, body { margin:0; padding:0; height:100%; }
 body {
   font-family: var(--body);
@@ -152,6 +153,7 @@ button, input, select, textarea {
   flex:1; margin-left: var(--sidebar-w); min-height:100vh;
   padding: 1.6rem 1.6rem 5rem;
   max-width: 720px;
+  transition: margin-left var(--dur) var(--ease-spring);
 }
 #topbar {
   display:none; align-items:center; justify-content:space-between;
@@ -185,13 +187,36 @@ button, input, select, textarea {
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 @media (max-width: 768px) {
-  #sidebar { transform: translateX(-110%); width: min(78vw, 280px); box-shadow: var(--shadow-dark); }
+  #sidebar { transform: translateX(-110%); width: min(78vw, 280px); box-shadow: none; }
   #sidebar.open { transform: translateX(0); }
   #main { margin-left:0; padding: 1rem 1rem 5rem; max-width: 100%; }
   #topbar { display:flex; }
   #overlay.show { display:block; }
   .page-title { font-size: 1rem; }
 }
+
+/* 桌面端折叠：与移动端一致，侧栏可收起 */
+#navToggle {
+  margin-left:auto; width:30px; height:30px; flex:0 0 auto;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:none; background:var(--card-2); color:var(--text);
+  border-radius:8px; cursor:pointer; font-size:1.05rem;
+  transition: background .12s, transform var(--dur) var(--ease-spring);
+}
+#navToggle:active { transform: scale(.92); }
+#navReopen {
+  display:none; position:fixed; top:1rem; left:1rem; z-index:101;
+  width:40px; height:40px; align-items:center; justify-content:center;
+  border:none; border-radius:10px; cursor:pointer;
+  background:var(--card); color:var(--text); box-shadow:var(--shadow-dark);
+  font-size:1.15rem;
+}
+@media (min-width:769px){
+  body.nav-collapsed #sidebar { transform: translateX(-110%); box-shadow:none; }
+  body.nav-collapsed #main { margin-left:0; }
+  body.nav-collapsed #navReopen { display:inline-flex; }
+}
+@media (max-width:768px){ #navToggle { display:none; } }   /* 移动端用顶部菜单按钮 */
 
 /* ===== Page header ===== */
 .page-head {
@@ -319,8 +344,9 @@ label { display:block; font-size: .72rem; font-weight: 600; margin-bottom: .3rem
 }
 .checkbox svg { width: 14px; height: 14px; }
 .item-text { flex:1; word-break:break-word; min-width: 0; }
-.item-text .main { font-weight: 500; font-size: .95rem; }
-.item-text .meta { font-size: .75rem; color: var(--muted); margin-top: .15rem; display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+.item-text .main { font-weight: 600; font-size: 1rem; color: var(--text); }
+.item-text .meta { font-size: .8rem; color: var(--muted); margin-top: .2rem; display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+.item-text .meta .pill { font-size: .72rem; }
 .item-actions { display:flex; gap:.3rem; flex-shrink: 0; }
 
 /* ===== Empty state ===== */
@@ -1278,6 +1304,7 @@ canvas { max-width:100%; border-radius: var(--radius-sm); background: #111; }
 </head>
 <body>
 <div id="overlay"></div>
+<button id="navReopen" aria-label="展开侧边栏" title="展开侧边栏">»</button>
 <div id="app">
   <aside id="sidebar">
     <div class="brand">
@@ -1286,6 +1313,7 @@ canvas { max-width:100%; border-radius: var(--radius-sm); background: #111; }
         <h1>Genzy</h1>
         <small>工作台</small>
       </div>
+      <button id="navToggle" aria-label="收起侧边栏" title="收起 / 展开侧边栏"><span class="chev">«</span></button>
     </div>
     <nav id="nav"></nav>
     <div class="foot">数据仅存本地 · 刷新不丢</div>
@@ -1472,6 +1500,12 @@ function initNav(){
 }
 function openSidebar(){ $('#sidebar').classList.add('open'); $('#overlay').classList.add('show'); $('#menuBtn').classList.add('open'); }
 function closeSidebar(){ $('#sidebar').classList.remove('open'); $('#overlay').classList.remove('show'); $('#menuBtn').classList.remove('open'); }
+function toggleNav(){
+  var collapsed = document.body.classList.toggle('nav-collapsed');
+  try { localStorage.setItem('genzy_nav', collapsed ? '1' : '0'); } catch(e){}
+}
+$('#navToggle').addEventListener('click', toggleNav);
+$('#navReopen').addEventListener('click', toggleNav);
 
 // 模块清理注册表：离开模块时释放 WebGL 上下文 / 定时器，避免上下文泄漏
 const moduleCleanups = {};
@@ -3561,6 +3595,7 @@ initModule.tools = function(){};
 // ===== Boot =====
 loadState();
 initNav();
+try { if (localStorage.getItem('genzy_nav') === '1') document.body.classList.add('nav-collapsed'); } catch(e){}
 switchModule(state.settings.lastModule || 'home');
 // 后台预加载天气（让天气数据在用户切到该模块前就开始获取）
 setTimeout(function(){
