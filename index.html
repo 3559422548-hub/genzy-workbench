@@ -45,6 +45,9 @@
   --pixel: 'Press Start 2P', cursive;
   --body: "Atkinson Hyperlegible", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Noto Sans SC", system-ui, sans-serif;
   color-scheme: light dark;
+  --ease-spring: cubic-bezier(.2,.8,.2,1);   /* Apple 默认：临界阻尼，无回弹 */
+  --ease-emph: cubic-bezier(.16,1,.3,1);     /* 强调入场：指数缓出，更利落 */
+  --dur: .28s;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -74,6 +77,9 @@ body {
   overflow-x: hidden;
   font-feature-settings: "tnum" 1, "ss01" 1;
   -webkit-font-smoothing: antialiased;
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
 }
 .pixel { font-family: var(--pixel); line-height: 1.4; letter-spacing: -.5px; }
 button, input, select, textarea {
@@ -87,9 +93,11 @@ button, input, select, textarea {
 #app { display:flex; min-height:100vh; }
 #sidebar {
   position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w);
-  background: var(--card);
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
   display:flex; flex-direction:column; z-index:100;
-  transform: translateX(0); transition: transform .25s ease;
+  transform: translateX(0); transition: transform var(--dur) var(--ease-spring);
   color: var(--text);
   border-right: 1px solid var(--border);
   box-shadow: var(--shadow);
@@ -111,12 +119,13 @@ button, input, select, textarea {
   padding: .6rem .7rem; margin-bottom: 2px;
   border-radius: 8px;
   cursor: pointer; min-height: 36px;
-  transition: background .12s, color .12s;
+  transition: background .12s, color .12s, transform .12s;
   font-weight: 500; color: var(--text);
   font-size: .85rem;
 }
 .nav-item:hover { background: var(--accent-soft); color: var(--accent); }
 .nav-item.active { background: var(--accent); color: #fff; }
+.nav-item:active { transform: scale(.97); }
 .nav-item .icon { font-size: 1rem; width: 22px; text-align:center; }
 .nav-item .label { font-size: .85rem; }
 .nav-cat {
@@ -124,11 +133,12 @@ button, input, select, textarea {
   padding: .5rem .7rem; margin-bottom: 1px;
   border-radius: 8px;
   cursor: pointer; min-height: 34px;
-  transition: background .12s, color .12s;
+  transition: background .12s, color .12s, transform .12s;
   font-weight: 600; font-size: .72rem; color: var(--muted);
   user-select:none; letter-spacing: .3px;
 }
 .nav-cat:hover { background: var(--card-2); color: var(--text); }
+.nav-cat:active { transform: scale(.99); }
 .nav-cat:first-child { margin-top:0; }
 .nav-cat .icon { font-size:.85rem;width:22px;text-align:center;display:inline-block; }
 .nav-cat .arrow { font-size:.5rem; color: var(--muted); transition:transform .2s; }
@@ -189,7 +199,8 @@ button, input, select, textarea {
   margin: -.4rem 0 1rem 0;
 }
 .page-head h2 {
-  margin:0; font-size: 1.9rem; font-weight: 800; letter-spacing: -.8px;
+  margin:0; font-size: 1.9rem; font-weight: 800; letter-spacing: -.8px; line-height: 1.15;
+  font-optical-sizing: auto; text-wrap: balance;
 }
 .page-head .sub {
   color: var(--muted); font-size: .85rem; font-weight: 500;
@@ -203,7 +214,7 @@ button, input, select, textarea {
   padding: .9rem 1rem;
   margin-bottom: .7rem;
   border: 1px solid var(--border);
-  transition: transform .2s ease, box-shadow .2s ease;
+  transition: transform var(--dur) var(--ease-spring), box-shadow var(--dur) var(--ease-spring);
 }
 .card-dark {
   background: var(--card-dark);
@@ -240,7 +251,7 @@ button, input, select, textarea {
   font-size: .85rem; transition: background .12s, color .12s, filter .1s, transform .15s;
 }
 .btn:disabled { opacity:.45; cursor:not-allowed; }
-.btn:active:not(:disabled) { transform: scale(0.95) rotateZ(1.7deg); filter: brightness(.94); }
+.btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(.94); }
 .btn.secondary { background: var(--card-2); color: var(--text); border-color: var(--border); }
 .btn.accent { background: var(--accent); color: #fff; border-color: transparent; position:relative; overflow:hidden; }
 .btn.accent::after { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent); transition:left .6s; pointer-events:none; }
@@ -1039,9 +1050,9 @@ canvas { max-width:100%; border-radius: var(--radius-sm); background: #111; }
 #modalTitle { font-size: 1.1rem; font-weight: 700; margin-bottom: .9rem; letter-spacing: -.3px; }
 
 /* ===== Module visibility ===== */
-.module { display:none; animation: fade .25s; }
-.module.active { display:block; }
-@keyframes fade { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
+/* 模块切换入场：每次 renderContent 重建 .view-enter，触发一次柔和淡入上升（临界阻尼缓动） */
+.view-enter { animation: viewIn var(--dur, .28s) var(--ease-spring, ease); }
+@keyframes viewIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
 
 @media (min-width: 769px) { .mobile-only { display:none !important; } }
 @media (max-width: 768px) { .desktop-only { display:none !important; } }
@@ -1231,6 +1242,37 @@ canvas { max-width:100%; border-radius: var(--radius-sm); background: #111; }
 @media (min-width: 1100px) { #main { max-width: 1040px; } }
 @media (min-width: 1300px) { #main { max-width: 1240px; } }
 @media (min-width: 1600px) { #main { max-width: 1480px; } }
+
+/* ===== Apple HIG：动效与无障碍偏好（§14）===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .12s !important;
+    scroll-behavior: auto !important;
+  }
+  /* 位移类过渡改为纯透明度淡入，去掉上升/弹性 */
+  .view-enter { animation: viewIn .18s ease !important; }
+  @keyframes viewIn { from { opacity:0 } to { opacity:1 } }
+  .btn:active:not(:disabled),
+  .nav-item:active, .nav-cat:active,
+  [class*="mod-"] .card:not(.card-dark):active,
+  .home-card-sm:active, .link-card:active, .app-launch:active,
+  .diary-cal-cell:active, .diary-mood-btn:active, .news-item:active,
+  .list-item:active, .book-chip:active { transform: none !important; }
+  .home-wx:hover, [class*="mod-"] .card:not(.card-dark):hover,
+  .home-card-sm:hover { transform: none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  /* 透明材质改为近实底，保证文字清晰 */
+  #sidebar, #topbar { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--card) !important; }
+}
+@media (prefers-contrast: more) {
+  /* 高对比：用文字色描边强化可辨识边界 */
+  .card, .btn, .nav-item, .input, .select, .textarea, .stat-box, .book-chip {
+    border: 1px solid currentColor;
+  }
+}
 
 </style>
 </head>
@@ -1450,11 +1492,15 @@ function switchModule(id){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 // 延迟渲染——给按钮动画留时间播放
+var _lastRenderedModule = null;
 var renderContent = (function(orig){
   return function(){ clearTimeout(window._renderTimer); window._renderTimer = setTimeout(orig, 130); };
 })(function(){
   $('#content').className = 'mod-' + currentModule;
-  $('#content').innerHTML = renderers[currentModule] ? renderers[currentModule]() : `<div class="card">模块建设中</div>`;
+  // 仅当真正切换模块时才播放入场动画；模块内增删/勾选等局部刷新不重放整页淡入（Apple §1：连续、局部反馈）
+  var enterCls = (currentModule !== _lastRenderedModule) ? 'view-enter' : '';
+  _lastRenderedModule = currentModule;
+  $('#content').innerHTML = '<div class="' + enterCls + '">' + (renderers[currentModule] ? renderers[currentModule]() : `<div class="card">模块建设中</div>`) + '</div>';
   if (initModule[currentModule]) initModule[currentModule]();
   checkHabits();
 });
