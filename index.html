@@ -3365,72 +3365,100 @@ function checkHabits(){
 }
 
 // ===== 导出到 Apple 日历 / 时钟（.ics，纯前端）=====
-// 生成 iCalendar 事件：按重复规则每天/工作日/自定义日出现，并用 VALARM 的
-// DURATION+REPEAT 在时段内按习惯间隔重复响铃，导入 Apple 日历后即系统提醒（锁屏也响）。
+// 关键修复：Apple 日历「不会」可靠地按 VALARM 的 DURATION+REPEAT 重复响铃，
+// 只会响第一个，所以之前导入后只提醒一次、后续不再跟进。
+// 正确做法：把「每一次提醒」都生成为「独立日历事件」，每个事件带一个标准的
+// 单点 VALARM(TRIGGER:-PT0M / ACTION:DISPLAY)。Apple 日历对每个事件都会按时提醒
+// （锁屏也响），从而真正覆盖每一天、每一次。
+var ICS_BYDAY = ['SU','MO','TU','WE','TH','FR','SA'];
+var ICS_HORIZON_DAYS = 60;   // 前向生成窗口（天）
+var ICS_MAX_EVENTS = 2000;   // 单习惯事件数上限（防止文件过大）
 function icsEscape(s){ return String(s).replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\r?\n/g,'\\n'); }
 function icsPad(n){ return (n<10?'0':'')+n; }
-var ICS_BYDAY = ['SU','MO','TU','WE','TH','FR','SA'];
-function nextHabitStart(h){
-  var st = (h.startTime || '09:00').split(':'); var H=+st[0], M=+st[1];
-  var rec = h.recurrence || 'daily';
-  var base = new Date();
-  for (var i=0;i<14;i++){
-    var cand = new Date(base.getFullYear(), base.getMonth(), base.getDate()+i, H, M, 0, 0);
-    if (cand.getTime() < Date.now()) continue;
-    var dow = cand.getDay();
-    if (rec==='weekdays' && (dow===0||dow===6)) continue;
-    if (rec==='custom' && (!h.weekdays || !h.weekdays.includes(dow))) continue;
-    return cand;
-  }
-  return new Date(base.getFullYear(), base.getMonth(), base.getDate(), H, M, 0, 0);
+function icsLocal(d){ return d.getFullYear()+icsPad(d.getMonth()+1)+icsPad(d.getDate())+'T'+icsPad(d.getHours())+icsPad(d.getMinutes())+'00'; }
+// 某天是否落在习惯的重复规则内
+function habitMatchesDay(h, d){
+  var dow = d.getDay(), rec = h.recurrence || 'daily';
+  if (rec==='weekdays') return (dow>=1 && dow<=5);
+  if (rec==='custom') return !!(h.weekdays && h.weekdays.indexOf(dow) >= 0);
+  return true; // daily
 }
-function habitVevent(h){
-  var start = nextHabitStart(h);
-  var dt = start.getFullYear()+icsPad(start.getMonth()+1)+icsPad(start.getDate())+'T'+icsPad(start.getHours())+icsPad(start.getMinutes())+'00';
-  var stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/, 'Z');
-  var rec = h.recurrence || 'daily';
-  var rrule;
-  if (rec==='weekdays') rrule = 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
-  else if (rec==='custom') rrule = 'FREQ=WEEKLY;BYDAY=' + (h.weekdays||[]).map(function(x){ return ICS_BYDAY[x]; }).join(',');
-  else rrule = 'FREQ=DAILY';
+// 某一天在 startTime~endTime 内、按 interval 步进，列出所有提醒时刻（Date[]，仅未来）
+function habitDaySlots(h, day){
   var intervalMin = (h.interval || 30) * (h.unit==='hours' ? 60 : 1);
-  var st2 = (h.startTime||'00:00').split(':').map(Number), et2 = (h.endTime||'23:59').split(':').map(Number);
-  var windowMin = Math.max(intervalMin, (et2[0]*60+et2[1]) - (st2[0]*60+st2[1]));
-  var repeats = Math.max(1, Math.floor(windowMin / intervalMin));
+  var st = (h.startTime||'09:00').split(':').map(Number);
+  var et = (h.endTime||'22:00').split(':').map(Number);
+  var startMin = st[0]*60+st[1], endMin = et[0]*60+et[1];
+  if (endMin < startMin) endMin = startMin + intervalMin;
+  var slots = [];
+  for (var m=startMin; m<=endMin; m+=intervalMin){
+    var slot = new Date(day.getFullYear(), day.getMonth(), day.getDate(), Math.floor(m/60), m%60, 0, 0);
+    if (slot.getTime() > Date.now()) slots.push(slot);
+  }
+  return slots;
+}
+// 某习惯在前向窗口内、全部应提醒的时刻（Date[]）
+function habitReminderTimes(h, horizonDays, maxEvents){
+  var times = [], base = new Date(); base.setHours(0,0,0,0);
+  for (var i=0; i<horizonDays; i++){
+    var day = new Date(base.getFullYear(), base.getMonth(), base.getDate()+i);
+    if (!habitMatchesDay(h, day)) continue;
+    var slots = habitDaySlots(h, day);
+    for (var j=0;j<slots.length;j++){
+      times.push(slots[j]);
+      if (times.length >= maxEvents) return times;
+    }
+  }
+  return times;
+}
+// 单个提醒时刻 -> 一个独立 VEVENT（带标准单点 VALARM）
+function habitVevent(h, dt){
+  var intervalMin = (h.interval || 30) * (h.unit==='hours' ? 60 : 1);
+  var durMin = Math.max(15, intervalMin);
+  var stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/, 'Z');
   var name = h.name || '习惯';
   return 'BEGIN:VEVENT\r\n'+
-    'UID:'+(h.id||uid())+'@genzy\r\n'+
+    'UID:'+(h.id||uid())+'-'+dt.getTime()+'@genzy\r\n'+
     'DTSTAMP:'+stamp+'\r\n'+
-    'DTSTART:'+dt+'\r\n'+
+    'DTSTART:'+icsLocal(dt)+'\r\n'+
+    'DTEND:'+icsLocal(new Date(dt.getTime()+durMin*60000))+'\r\n'+
     'SUMMARY:'+icsEscape('习惯：'+name)+'\r\n'+
-    'RRULE:'+rrule+'\r\n'+
+    'TRANSP:OPAQUE\r\n'+
     'BEGIN:VALARM\r\n'+
     'TRIGGER:-PT0M\r\n'+
     'ACTION:DISPLAY\r\n'+
     'DESCRIPTION:'+icsEscape('该「'+name+'」啦')+'\r\n'+
-    'DURATION:PT'+intervalMin+'M\r\n'+
-    'REPEAT:'+repeats+'\r\n'+
     'END:VALARM\r\n'+
     'END:VEVENT';
 }
 function wrapICS(vevents){
   return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Genzy Workbench//Habit//CN\r\nCALSCALE:GREGORIAN\r\n'+
-    vevents+'\r\nEND:VCALENDAR';
+    (vevents||'')+'\r\nEND:VCALENDAR';
 }
-function buildHabitICS(h){ return wrapICS(habitVevent(h)); }
+function buildHabitICS(h){
+  var times = habitReminderTimes(h, ICS_HORIZON_DAYS, ICS_MAX_EVENTS);
+  if (!times.length) return null;
+  return wrapICS(times.map(function(t){ return habitVevent(h, t); }).join('\r\n'));
+}
 function buildAllHabitsICS(){
   var items = (state.habits && state.habits.items || []).filter(function(h){ return h.enabled; });
   if (!items.length) return null;
-  return wrapICS(items.map(habitVevent).join('\r\n'));
+  var vevents = [];
+  items.forEach(function(h){
+    habitReminderTimes(h, ICS_HORIZON_DAYS, ICS_MAX_EVENTS).forEach(function(t){ vevents.push(habitVevent(h, t)); });
+  });
+  if (!vevents.length) return null;
+  return wrapICS(vevents.join('\r\n'));
 }
 function downloadICS(filename, content){
+  if (!content){ toast('该习惯近期没有可提醒的时间'); return; }
   try {
     var blob = new Blob([content], { type:'text/calendar;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a'); a.href=url; a.download=filename;
     document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
-    toast('已生成日历文件，导入 Apple 日历即可 ⏰');
+    toast('已生成日历文件，导入 Apple 日历即可 ⏰（每次提醒都是独立事件）');
   } catch(e){ toast('导出失败：'+e.message); }
 }
 
