@@ -3509,9 +3509,9 @@ renderers.habits = function(){
         '</div>'+
       '</div>'+
       '<button class="btn btn-block" id="hbAdd">添加习惯</button>'+
-      '<button class="btn btn-block secondary" id="hbExportAll" style="margin-top:.6rem">📅 全部导出到 Apple 日历</button>'+
-      '<button class="btn btn-block" id="hbWebcal" style="margin-top:.5rem">🔄 更新日历订阅(webcal)</button>'+
-      '<div id="hbWebcalWrap" style="display:none;margin-top:.6rem;font-size:.78rem;color:var(--muted);line-height:1.4">Apple 日历里选「其他›添加订阅日历」，粘贴：<br><code id="hbWebcalUrl" style="word-break:break-all;color:var(--text)"></code> <button class="btn btn-sm" id="hbCopyCal">复制</button></div>'+
+      '<button class="btn btn-block" id="hbUpdate" style="margin-top:.6rem">🔄 更新到日历（推送全部习惯）</button>'+
+      '<button class="btn btn-block secondary" id="hbExportAll" style="margin-top:.5rem">📅 导出全部到 Apple 日历（.ics 文件）</button>'+
+      '<div id="hbWebcalWrap" style="display:none;margin-top:.6rem;font-size:.78rem;color:var(--muted);line-height:1.4">日历订阅链接（用 https，兼容 Apple / 系统日历）：<br><code id="hbWebcalUrl" style="word-break:break-all;color:var(--text)"></code> <button class="btn btn-sm" id="hbCopyCal">复制</button><br>在 Apple 日历选「其他 › 添加订阅日历」粘贴即可。改了习惯后再次点「更新到日历」即同步。</div>'+
     '</div>'+
     '<div class="card">'+
       '<div class="card-title"><span class="ttl">📋 我的习惯</span><span class="pill accent">'+items.length+'</span></div>'+
@@ -3584,21 +3584,25 @@ initModule.habits = function(){
     if (ics) downloadICS('genzy-habits.ics', ics);
     else toast('还没有启用的习惯');
   });
-  var hbWc = $('#hbWebcal');
-  if (hbWc) hbWc.addEventListener('click', function(){
+  var hbUpd = $('#hbUpdate');
+  if (hbUpd) hbUpd.addEventListener('click', function(){
     var ics = buildAllHabitsICS();
     if (!ics) { toast('还没有启用的习惯'); return; }
+    // 优先推送到 webcal 订阅：部署版会持续同步，修改习惯后点此即更新到日历
     fetch('/api/ics', { method:'POST', headers:{ 'Content-Type':'text/calendar' }, body: ics })
       .then(function(r){ return r.ok ? r.text() : Promise.reject(new Error('HTTP '+r.status)); })
       .then(function(){
-        var url = 'webcal://' + location.host + '/habits.ics';
+        var url = 'https://' + location.host + '/habits.ics';
         var wrap = document.getElementById('hbWebcalWrap');
         var u = document.getElementById('hbWebcalUrl');
         if (wrap) wrap.style.display = 'block';
         if (u) u.textContent = url;
-        toast('日历订阅已更新，去 Apple 日历粘贴链接即可 ⏰');
+        toast('已更新到日历订阅，Apple 日历会自动同步 ⏰');
       })
-      .catch(function(e){ toast('更新失败：'+e.message+'（用「全部导出」仍可用）'); });
+      .catch(function(){
+        // 本地打开 / 无服务端：降级为下载合并 .ics，重新导入即完成「更新」
+        downloadICS('genzy-habits.ics', ics);
+      });
   });
   var hbCopy = $('#hbCopyCal');
   if (hbCopy) hbCopy.addEventListener('click', function(){
